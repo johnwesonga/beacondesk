@@ -16,7 +16,8 @@ support tickets, conversations, attachments and teams.
 - Direct browser uploads to Tigris and authorized attachment downloads.
 - Password authentication, account confirmation and password reset.
 
-Notifications are planned; see the [notification specification](docs/notifications-tech-spec.md).
+Notification capture and background in-app processing are implemented; the inbox
+UI and email delivery are next. See the [notification specification](docs/notifications-tech-spec.md).
 
 ## Stack
 

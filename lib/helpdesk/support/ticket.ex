@@ -18,6 +18,8 @@ defmodule Helpdesk.Support.Ticket do
       change relate_actor(:reporter)
       change Helpdesk.Support.Changes.CreateTicketNumber
       change Helpdesk.Support.Changes.RecordTicketEvent
+      change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.created"}
+
       change set_attribute(:status, :new)
       change set_attribute(:source, :web)
     end

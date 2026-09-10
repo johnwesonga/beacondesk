@@ -8,6 +8,14 @@ defmodule Helpdesk.Notifications.Capture do
   alias Helpdesk.Repo
   alias Helpdesk.Support.{Message, Team, TeamMembership, Ticket}
 
+  @doc false
+  def current_candidate?(event, recipient_id) do
+    case Repo.get(Ticket, event.ticket_id) do
+      nil -> false
+      ticket -> recipient_id in candidates(event.kind, ticket, event.actor_id)
+    end
+  end
+
   # Called only with persisted events inside RecordTicketEvent's transaction.
   def enqueue(event, record, original) do
     ticket = if match?(%Ticket{}, record), do: record, else: Repo.get!(Ticket, record.ticket_id)

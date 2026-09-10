@@ -24,9 +24,18 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
    assignment changes. The current initial-description path creates no message
    (`CreateInitialMessage` is a stub); if implemented later, it must explicitly
    suppress the initial message's reply notification.
-3. **Next: in-app processing.** Notification resource, visibility policies,
-   idempotent fan-out and supervised outbox worker.
-4. **Pending: LiveView UI.** Bell, unread count, pagination and read actions.
+3. **Complete: in-app processing.** Notification resource, query-time visibility,
+   paginated list/unread count/mark-read domain functions, idempotent fan-out and
+   supervised worker. The worker rechecks routing and access, processes up to 25
+   events every five seconds, and broadcasts private invalidations after commit.
+   Configure `:notification_worker_enabled` (false in tests) and
+   `:notification_poll_interval` on `:helpdesk`. Tests invoke `Worker.run_once/1`
+   with a controlled time. No email delivery records are created yet.
+   For this SQLite-only in-app step, claiming and fan-out share one short writer
+   transaction, so crashes roll back the claim instead of requiring persistent
+   leases. The lease protocol below remains the design for external email I/O.
+   Failures retry with backoff/jitter, becoming failed after eight attempts.
+4. **Next: LiveView UI.** Bell, unread count, pagination and read actions.
 5. **Pending: email.** Preferences, delivery resource, retries and monitoring.
 
 ## Existing integration points

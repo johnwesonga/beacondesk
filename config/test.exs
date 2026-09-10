@@ -1,4 +1,5 @@
 import Config
+config :helpdesk, notification_worker_enabled: false
 config :helpdesk, token_signing_secret: "zdCwA+HfJe3VeEnscypAgnr6YsP96R8v"
 config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
