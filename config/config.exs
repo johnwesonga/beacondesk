@@ -31,6 +31,9 @@ config :spark,
     remove_parens?: true,
     "Ash.Resource": [
       section_order: [
+        :authentication,
+        :token,
+        :user_identity,
         :resource,
         :code_interface,
         :actions,
@@ -52,7 +55,8 @@ config :spark,
 
 config :helpdesk,
   ecto_repos: [Helpdesk.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  ash_domains: [Helpdesk.Accounts, Helpdesk.Support, Helpdesk.Audit, Helpdesk.Notifications]
 
 # Configures the endpoint
 config :helpdesk, HelpdeskWeb.Endpoint,

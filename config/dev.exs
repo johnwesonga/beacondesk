@@ -1,12 +1,9 @@
 import Config
 config :ash, policies: [show_policy_breakdowns?: true]
 
-# Configure your database
+# SQLite database file (keep the existing filename to preserve local data).
 config :helpdesk, Helpdesk.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "helpdesk_dev",
+  database: Path.expand("../helpdesk_dev", __DIR__),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
@@ -65,7 +62,7 @@ config :helpdesk, HelpdeskWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :helpdesk, dev_routes: true
+config :helpdesk, dev_routes: true, token_signing_secret: "GSeq6+XLDRNZh3TIDMAyyxn+vzqXpI8z"
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
@@ -87,3 +84,19 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Configure S3 client for access to Tigris
+config :ex_aws,
+  debug_requests: true,
+  json_codec: Jason,
+  access_key_id: {:system, "AWS_ACCESS_KEY_ID"},
+  secret_access_key: {:system, "AWS_SECRET_ACCESS_KEY"}
+
+endpoint = System.fetch_env!("AWS_ENDPOINT_URL_S3")
+uri = URI.parse(endpoint)
+
+config :ex_aws, :s3,
+  scheme: "#{uri.scheme}://",
+  host: uri.host,
+  port: uri.port,
+  region: "auto"

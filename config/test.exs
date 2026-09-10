@@ -1,5 +1,7 @@
 import Config
-config :ash, policies: [show_policy_breakdowns?: true]
+config :helpdesk, token_signing_secret: "zdCwA+HfJe3VeEnscypAgnr6YsP96R8v"
+config :bcrypt_elixir, log_rounds: 1
+config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true
 
 # Configure your database
 #
@@ -7,10 +9,7 @@ config :ash, policies: [show_policy_breakdowns?: true]
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
 config :helpdesk, Helpdesk.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "helpdesk_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: Path.expand("../helpdesk_test#{System.get_env("MIX_TEST_PARTITION")}", __DIR__),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 

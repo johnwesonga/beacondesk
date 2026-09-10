@@ -31,7 +31,134 @@ defmodule HelpdeskWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
+  attr :current_page, :atom, default: nil
+
   slot :inner_block, required: true
+
+  def app(%{current_scope: %{user: %{role: role, status: :active}}} = assigns)
+      when role in [:admin, :customer, :agent] do
+    assigns = assign(assigns, customer?: role == :customer, agent?: role == :agent)
+
+    ~H"""
+    <div
+      data-theme="light"
+      class={["min-h-screen bg-slate-50 text-slate-800", @customer? && "customer-portal"]}
+    >
+      <a href="#main-content" class="sr-only focus:not-sr-only focus:block focus:p-3">
+        Skip to content
+      </a>
+      <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 lg:px-6">
+          <.link
+            navigate={
+              if @customer?, do: ~p"/portal", else: if(@agent?, do: ~p"/inbox", else: ~p"/admin")
+            }
+            class="flex items-center gap-2 text-lg font-black tracking-tight text-slate-900"
+          >
+            <span class="grid size-9 place-items-center rounded-xl bg-sky-600 text-white">
+              <.icon name="hero-lifebuoy" class="size-5" />
+            </span>
+            <span>Beacon<span class="text-sky-600">Desk</span></span>
+          </.link>
+          <span class="ml-auto rounded-lg bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
+            {if @customer?, do: "Customer", else: if(@agent?, do: "Agent", else: "Admin")}
+          </span>
+          <.link
+            href={~p"/sign-out"}
+            class="rounded-lg px-3 py-2 text-sm font-semibold hover:bg-slate-100"
+          >
+            Sign out
+          </.link>
+        </div>
+      </header>
+      <div class="mx-auto flex max-w-[1600px] flex-col lg:flex-row">
+        <aside class="shrink-0 border-b border-slate-200 bg-white p-4 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:w-64 lg:border-r lg:border-b-0">
+          <div class="mb-5 hidden rounded-2xl bg-slate-900 p-4 text-white lg:block">
+            <p class="text-xs font-bold uppercase tracking-widest text-sky-300">
+              {if @customer?,
+                do: "Customer portal",
+                else: if(@agent?, do: "Support workspace", else: "Admin workspace")}
+            </p>
+            <p class="mt-2 truncate font-bold">
+              {@current_scope.user.first_name} {@current_scope.user.last_name}
+            </p>
+            <p class="mt-1 truncate text-xs text-slate-300">{@current_scope.user.email}</p>
+          </div>
+          <nav aria-label="Workspace" class="flex flex-wrap gap-1 lg:flex-col">
+            <.workspace_link
+              :if={!@customer?}
+              href={~p"/inbox"}
+              icon="hero-inbox-stack"
+              active={@current_page == :inbox}
+            >
+              Team inbox
+            </.workspace_link>
+            <.workspace_link
+              :if={@customer?}
+              href={~p"/portal"}
+              icon="hero-squares-2x2"
+              active={@current_page == :overview}
+            >
+              Overview
+            </.workspace_link>
+            <.workspace_link href={~p"/tickets"} icon="hero-inbox" active={@current_page == :tickets}>
+              {if @customer?, do: "My tickets", else: "Ticket queue"}
+            </.workspace_link>
+            <.workspace_link
+              href={~p"/ticket/new"}
+              icon="hero-plus-circle"
+              active={@current_page == :new_ticket}
+            >
+              New ticket
+            </.workspace_link>
+            <.workspace_link
+              :if={@customer?}
+              href={~p"/help"}
+              icon="hero-book-open"
+              active={@current_page == :help}
+            >
+              Help center
+            </.workspace_link>
+            <p
+              :if={!@customer? and !@agent?}
+              class="mt-5 hidden px-3 pb-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 lg:block"
+            >
+              Administration
+            </p>
+            <.workspace_link
+              :if={!@customer? and !@agent?}
+              href={~p"/admin"}
+              icon="hero-chart-bar"
+              active={@current_page == :operations}
+            >
+              Operations
+            </.workspace_link>
+            <.workspace_link
+              :if={!@customer? and !@agent?}
+              href={~p"/teams"}
+              icon="hero-user-group"
+              active={@current_page == :teams}
+            >
+              Teams
+            </.workspace_link>
+            <.workspace_link
+              :if={!@customer? and !@agent?}
+              href={~p"/users"}
+              icon="hero-users"
+              active={@current_page == :users}
+            >
+              Users
+            </.workspace_link>
+          </nav>
+        </aside>
+        <main id="main-content" class="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+          {render_slot(@inner_block)}
+        </main>
+      </div>
+      <.flash_group flash={@flash} />
+    </div>
+    """
+  end
 
   def app(assigns) do
     ~H"""
@@ -69,6 +196,29 @@ defmodule HelpdeskWeb.Layouts do
     </main>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :href, :string, required: true
+  attr :icon, :string, required: true
+  attr :active, :boolean, default: false
+  slot :inner_block, required: true
+
+  defp workspace_link(assigns) do
+    ~H"""
+    <.link
+      navigate={@href}
+      aria-current={@active && "page"}
+      class={[
+        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-sky-600",
+        if(@active,
+          do: "bg-sky-100 font-bold text-sky-700",
+          else: "text-slate-600 hover:bg-slate-100"
+        )
+      ]}
+    >
+      <.icon name={@icon} class="size-4" />{render_slot(@inner_block)}
+    </.link>
     """
   end
 

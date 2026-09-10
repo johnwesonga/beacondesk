@@ -35,3 +35,13 @@ helpdesk-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# Local AshSqlite databases and sidecar files.
+/helpdesk_test*
+/helpdesk_dev*
+
+*.env
+*.envrc
+
+*.DS_Store
+# Elixir language server cache
+/.elixir_ls/
