@@ -16,11 +16,15 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
 
 1. **Complete: outbox foundation.** Notifications domain, internal OutboxEvent
    resource, SQLite migration/snapshot and persistence/authorization tests.
-   No ticket actions enqueue events yet. IDs are stored as internal references;
-   the next step must derive them from persisted resources, never browser input.
-2. **Next: event capture.** Recipient selection and transactional enqueue from
-   RecordTicketEvent, including no-op and initial-description suppression.
-3. **Pending: in-app processing.** Notification resource, visibility policies,
+   IDs are stored as internal references derived from persisted resources.
+2. **Complete: event capture.** `Notifications.Capture` selects recipients from
+   persisted ticket state and current resource policies. `RecordTicketEvent`
+   enqueues in its transaction; enqueue failure rolls back the parent write.
+   No-op changes are skipped, actors excluded, and team routing coalesced with
+   assignment changes. The current initial-description path creates no message
+   (`CreateInitialMessage` is a stub); if implemented later, it must explicitly
+   suppress the initial message's reply notification.
+3. **Next: in-app processing.** Notification resource, visibility policies,
    idempotent fan-out and supervised outbox worker.
 4. **Pending: LiveView UI.** Bell, unread count, pagination and read actions.
 5. **Pending: email.** Preferences, delivery resource, retries and monitoring.

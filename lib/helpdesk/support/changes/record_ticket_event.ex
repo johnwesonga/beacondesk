@@ -38,8 +38,14 @@ defmodule Helpdesk.Support.Changes.RecordTicketEvent do
                      actor: context.actor,
                      authorize?: false
                    ) do
-                {:ok, _event} -> :ok
-                {:error, error} -> Repo.rollback(error)
+                {:ok, saved_event} ->
+                  case Helpdesk.Notifications.Capture.enqueue(saved_event, audit_record, original) do
+                    {:ok, _} -> :ok
+                    {:error, error} -> Repo.rollback(error)
+                  end
+
+                {:error, error} ->
+                  Repo.rollback(error)
               end
             end
 
