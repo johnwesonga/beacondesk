@@ -190,7 +190,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Teams.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app current_page={:teams} flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      notification_count={@notification_count}
+      current_page={:teams}
+      flash={@flash}
+      current_scope={@current_scope}
+    >
       <div class="space-y-6">
         <header class="flex items-center justify-between gap-4">
           <div>

@@ -151,7 +151,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Index do
   @impl true
   def render(%{current_user: %{role: :customer}} = assigns) do
     ~H"""
-    <Layouts.app current_page={:tickets} flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      notification_count={@notification_count}
+      current_page={:tickets}
+      flash={@flash}
+      current_scope={@current_scope}
+    >
       <section id="customer-tickets">
         <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -256,7 +261,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Index do
 
   def render(assigns) do
     ~H"""
-    <Layouts.app current_page={:tickets} flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      notification_count={@notification_count}
+      current_page={:tickets}
+      flash={@flash}
+      current_scope={@current_scope}
+    >
       <div class="space-y-8">
         <header class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div class="space-y-2">

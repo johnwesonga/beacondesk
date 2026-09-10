@@ -415,7 +415,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_page={:inbox}>
+    <Layouts.app
+      notification_count={@notification_count}
+      flash={@flash}
+      current_scope={@current_scope}
+      current_page={:inbox}
+    >
       <section id="agent-dashboard">
         <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>

@@ -151,7 +151,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_page={@current_page}>
+    <Layouts.app
+      notification_count={@notification_count}
+      flash={@flash}
+      current_scope={@current_scope}
+      current_page={@current_page}
+    >
       <section :if={@live_action == :overview} id="customer-home">
         <header class="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>

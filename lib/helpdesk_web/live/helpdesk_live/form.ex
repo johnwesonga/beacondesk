@@ -87,7 +87,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app current_page={:new_ticket} flash={@flash} current_scope={@current_scope}>
+    <Layouts.app
+      notification_count={@notification_count}
+      current_page={:new_ticket}
+      flash={@flash}
+      current_scope={@current_scope}
+    >
       <div class="mx-auto max-w-3xl space-y-8">
         <.link navigate={~p"/tickets"} class="inline-flex items-center gap-2 text-sm text-slate-500">
           <.icon name="hero-arrow-left" class="size-4" />My tickets

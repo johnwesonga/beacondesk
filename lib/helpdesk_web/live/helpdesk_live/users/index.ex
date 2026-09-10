@@ -128,7 +128,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Users.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_page={:users}>
+    <Layouts.app
+      notification_count={@notification_count}
+      flash={@flash}
+      current_scope={@current_scope}
+      current_page={:users}
+    >
       <header class="mb-6 flex items-end justify-between gap-4">
         <div>
           <p class="text-sm font-semibold text-violet-600">Administration</p>

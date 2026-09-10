@@ -16,8 +16,8 @@ support tickets, conversations, attachments and teams.
 - Direct browser uploads to Tigris and authorized attachment downloads.
 - Password authentication, account confirmation and password reset.
 
-Notification capture and background in-app processing are implemented; the inbox
-UI and email delivery are next. See the [notification specification](docs/notifications-tech-spec.md).
+In-app notifications include a live unread badge, a paginated inbox and read
+actions. Email delivery is next. See the [notification specification](docs/notifications-tech-spec.md).
 
 ## Stack
 
@@ -98,6 +98,7 @@ can manage users and teams from the application.
 | `/tickets` | Ticket queue; agents are routed to their inbox |
 | `/ticket/new` | Create a ticket |
 | `/tickets/:id` | Ticket details, messages and attachments |
+| `/notifications` | Notification inbox and unread updates |
 | `/inbox` | Agent workspace |
 | `/portal` | Customer overview |
 | `/admin` | Administrator overview |

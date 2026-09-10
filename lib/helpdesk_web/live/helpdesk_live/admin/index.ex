@@ -42,7 +42,12 @@ defmodule HelpdeskWeb.HelpdeskLive.Admin.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope} current_page={:operations}>
+    <Layouts.app
+      notification_count={@notification_count}
+      flash={@flash}
+      current_scope={@current_scope}
+      current_page={:operations}
+    >
       <section id="admin-dashboard">
         <div class="mb-7 flex flex-wrap items-end justify-between gap-4">
           <div>

@@ -44,6 +44,7 @@ defmodule HelpdeskWeb.Router do
       live "/help", HelpdeskLive.Customer, :help
       live "/tickets/:id", HelpdeskLive.Tickets.View, :show
       live "/tickets", HelpdeskLive.Index, :index
+      live "/notifications", NotificationsLive, :index
       live "/users", HelpdeskLive.Users.Index, :index
       live "/teams", HelpdeskLive.Teams.Index, :index
       live "/teams/new", HelpdeskLive.Teams.Index, :new

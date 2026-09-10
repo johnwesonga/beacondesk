@@ -35,8 +35,13 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
    transaction, so crashes roll back the claim instead of requiring persistent
    leases. The lease protocol below remains the design for external email I/O.
    Failures retry with backoff/jitter, becoming failed after eight attempts.
-4. **Next: LiveView UI.** Bell, unread count, pagination and read actions.
-5. **Pending: email.** Preferences, delivery resource, retries and monitoring.
+4. **Complete: LiveView UI.** Authenticated `/notifications` inbox with streamed
+   keyset pages, all/unread filters, individual and cutoff-based bulk read actions,
+   authorized ticket navigation and empty/error states. Shared authentication
+   hooks subscribe to private invalidations and coalesce count/list refreshes;
+   authenticated workspace layouts display the bell and capped unread badge.
+   Mount/reconnect reloads persisted state. Pagination resets on a new visit.
+5. **Next: email.** Preferences, delivery resource, retries and monitoring.
 
 ## Existing integration points
 

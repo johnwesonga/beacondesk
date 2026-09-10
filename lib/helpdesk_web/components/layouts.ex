@@ -32,6 +32,7 @@ defmodule HelpdeskWeb.Layouts do
     doc: "the current [scope](https://hexdocs.pm/phoenix/scopes.html)"
 
   attr :current_page, :atom, default: nil
+  attr :notification_count, :integer, default: nil
 
   slot :inner_block, required: true
 
@@ -68,6 +69,26 @@ defmodule HelpdeskWeb.Layouts do
             class="rounded-lg px-3 py-2 text-sm font-semibold hover:bg-slate-100"
           >
             Sign out
+          </.link>
+          <.link
+            id="notification-bell"
+            navigate={~p"/notifications"}
+            aria-label={
+              if is_integer(@notification_count),
+                do: "Notifications, #{@notification_count} unread",
+                else: "Notifications"
+            }
+            class="relative rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+          >
+            <.icon name="hero-bell" class="size-6" />
+            <span
+              :if={is_integer(@notification_count) and @notification_count > 0}
+              id="notification-badge"
+              aria-live="polite"
+              class="absolute -right-2 -top-1 rounded-full bg-sky-600 px-1.5 text-xs font-bold text-white"
+            >
+              {if @notification_count > 99, do: "99+", else: @notification_count}
+            </span>
           </.link>
         </div>
       </header>
