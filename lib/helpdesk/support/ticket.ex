@@ -14,8 +14,19 @@ defmodule Helpdesk.Support.Ticket do
     defaults [:read]
 
     create :create_ticket do
-      accept [:title, :description, :status, :priority, :source, :category, :team_id]
+      accept [
+        :title,
+        :description,
+        :status,
+        :priority,
+        :source,
+        :category,
+        :team_id,
+        :assignee_id
+      ]
+
       change relate_actor(:reporter)
+      validate Helpdesk.Support.Validations.TicketCanBeAssigned, only_when_valid?: true
       change Helpdesk.Support.Changes.CreateTicketNumber
       change Helpdesk.Support.Changes.RecordTicketEvent
       change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.created"}
@@ -26,8 +37,19 @@ defmodule Helpdesk.Support.Ticket do
 
     update :update_ticket do
       require_atomic? false
-      accept [:title, :description, :status, :priority, :source, :category, :team_id]
-      change relate_actor(:reporter)
+
+      accept [
+        :title,
+        :description,
+        :status,
+        :priority,
+        :source,
+        :category,
+        :team_id,
+        :assignee_id
+      ]
+
+      validate Helpdesk.Support.Validations.TicketCanBeAssigned, only_when_valid?: true
       change Helpdesk.Support.Changes.RecordTicketEvent
       change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.updated"}
     end
@@ -67,6 +89,10 @@ defmodule Helpdesk.Support.Ticket do
   end
 
   policies do
+    policy action([:create_ticket, :update_ticket, :assign]) do
+      authorize_if Helpdesk.Support.Checks.CanSetAssignment
+    end
+
     policy always() do
       forbid_unless actor_present()
       authorize_if always()

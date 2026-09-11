@@ -3,8 +3,7 @@ defmodule Helpdesk.Support.Validations.TicketCanBeAssigned do
   Validates that:
   1) a ticket can be assigned to a user of the correct role, admin or agent.
   2) The selected team is active
-  3) The assignee is not the same as the reporter
-  4) Assignee belongs to the selected team.
+  3) Assignee belongs to the selected team.
   """
 
   use Ash.Resource.Validation
@@ -20,42 +19,24 @@ defmodule Helpdesk.Support.Validations.TicketCanBeAssigned do
 
   @impl true
   def validate(changeset, _opts, _context) do
-    with :ok <- validate_assignee(changeset),
-         :ok <- validate_team(changeset),
-         :ok <- validate_team_membership(changeset) do
+    if assignment_changed?(changeset) or changeset.action.name == :assign do
+      assignee_id = Ash.Changeset.get_attribute(changeset, :assignee_id)
+      team_id = Ash.Changeset.get_attribute(changeset, :team_id)
+
+      with :ok <- validate_assignee_role(assignee_id),
+           :ok <- validate_team_active(team_id) do
+        validate_team_membership_assignee(assignee_id, team_id)
+      end
+    else
       :ok
     end
   end
 
-  defp validate_assignee(changeset) do
-    case Ash.Changeset.fetch_change(changeset, :assignee_id) do
-      :error ->
-        :ok
-
-      {:ok, nil} ->
-        :ok
-
-      {:ok, assignee_id} ->
-        validate_assignee_role(assignee_id)
-    end
-  end
-
-  defp validate_team(changeset) do
-    case Ash.Changeset.fetch_change(changeset, :team_id) do
-      :error ->
-        :ok
-
-      {:ok, nil} ->
-        :ok
-
-      {:ok, team_id} ->
-        validate_team_active(team_id)
-    end
-  end
+  defp validate_assignee_role(nil), do: :ok
 
   defp validate_assignee_role(assignee_id) do
     case Repo.get(User, assignee_id) do
-      %User{role: role} when role in [:agent, :admin] ->
+      %User{role: role, status: :active} when role in [:agent, :admin] ->
         :ok
 
       _ ->
@@ -63,10 +44,12 @@ defmodule Helpdesk.Support.Validations.TicketCanBeAssigned do
          InvalidAttribute.exception(
            field: :assignee_id,
            value: assignee_id,
-           message: "must refer to an agent or administrator"
+           message: "must refer to an active agent or administrator"
          )}
     end
   end
+
+  defp validate_team_active(nil), do: :ok
 
   defp validate_team_active(team_id) do
     case Repo.get(Team, team_id) do
@@ -80,17 +63,6 @@ defmodule Helpdesk.Support.Validations.TicketCanBeAssigned do
            value: team_id,
            message: "must refer to an active team"
          )}
-    end
-  end
-
-  defp validate_team_membership(changeset) do
-    if assignment_changed?(changeset) do
-      assignee_id = Ash.Changeset.get_attribute(changeset, :assignee_id)
-      team_id = Ash.Changeset.get_attribute(changeset, :team_id)
-
-      validate_team_membership_assignee(assignee_id, team_id)
-    else
-      :ok
     end
   end
 

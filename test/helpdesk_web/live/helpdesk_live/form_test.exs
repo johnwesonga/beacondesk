@@ -118,6 +118,16 @@ defmodule HelpdeskWeb.HelpdeskLive.FormTest do
            end)
   end
 
+  test "assignment controls follow assignment permission", %{conn: conn} do
+    for role <- [:customer, :agent, :admin] do
+      user = register_user!()
+      Helpdesk.Repo.update!(Ecto.Changeset.change(user, role: role))
+      authenticated = conn |> init_test_session(%{}) |> store_in_session(user)
+      {:ok, view, _} = live(authenticated, ~p"/ticket/new")
+      assert has_element?(view, "#ticket-assignment") == role in [:agent, :admin]
+    end
+  end
+
   defp register_user! do
     email = "ticket-form-#{System.unique_integer([:positive])}@example.com"
     password = "secure-password"

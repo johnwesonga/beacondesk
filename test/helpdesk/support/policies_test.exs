@@ -143,8 +143,8 @@ defmodule Helpdesk.Support.PoliciesTest do
     assert Ash.can?({ctx.team, :update}, ctx.admin)
     assert Ash.can?({TeamMembership, :create}, ctx.admin)
     assert Ash.can?({ctx.membership, :update}, ctx.admin)
-    assert ids(Team, ctx.agent) == []
-    assert ids(Team, ctx.other_agent) == []
+    assert ids(Team, ctx.agent) == [ctx.team.id]
+    assert ids(Team, ctx.other_agent) == [ctx.team.id]
     assert ids(TeamMembership, ctx.agent) == [ctx.membership.id]
     assert ids(TeamMembership, ctx.other_agent) == []
   end
@@ -253,7 +253,7 @@ defmodule Helpdesk.Support.PoliciesTest do
                actor: ctx.admin
              )
 
-    assert Exception.message(error) =~ "must refer to an agent or administrator"
+    assert Exception.message(error) =~ "must refer to an active agent or administrator"
 
     assert {:ok, %Ticket{assignee_id: nil}} =
              Ash.update(ctx.ticket, %{assignee_id: nil},

@@ -29,12 +29,13 @@ defmodule Helpdesk.Support.Team do
       forbid_unless actor_present()
       # authorize_if actor_attribute_equals(:role, :admin)
       # authorize_if expr(^actor(:role) == :agent and exists(members, user_id == ^actor(:id)))
-      authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :manage_teams}
+      authorize_if {Helpdesk.Accounts.Checks.HasPermission,
+                    permission: [:manage_teams, :assign_tickets]}
     end
 
     policy action_type([:create, :update]) do
       # authorize_if actor_attribute_equals(:role, :admin)
-      authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :manage_teams}
+      authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: [:manage_teams]}
     end
   end
 

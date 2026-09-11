@@ -83,7 +83,11 @@ defmodule Helpdesk.Notifications.CaptureTest do
     """)
 
     assert {:error, _} =
-             Ash.create(Ticket, params(ctx), action: :create_ticket, actor: ctx.reporter)
+             Ash.create(Ticket, params(ctx),
+               action: :create_ticket,
+               actor: ctx.reporter,
+               authorize?: false
+             )
 
     assert Ash.read!(Ticket, authorize?: false) == []
     assert Ash.read!(Helpdesk.Support.TicketEvent, authorize?: false) == []
@@ -92,8 +96,14 @@ defmodule Helpdesk.Notifications.CaptureTest do
 
   defp events, do: Ash.read!(OutboxEvent, authorize?: false)
 
+  # Trusted fixture: routing is supplied server-side; customers cannot set it directly.
   defp ticket(ctx),
-    do: Ash.create!(Ticket, params(ctx), action: :create_ticket, actor: ctx.reporter)
+    do:
+      Ash.create!(Ticket, params(ctx),
+        action: :create_ticket,
+        actor: ctx.reporter,
+        authorize?: false
+      )
 
   defp params(ctx),
     do: %{

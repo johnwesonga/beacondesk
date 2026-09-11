@@ -54,6 +54,10 @@ defmodule Helpdesk.Accounts.User do
   end
 
   actions do
+    read :list_assignees do
+      filter expr(status == :active and role in [:admin, :agent])
+    end
+
     create :create_user do
       accept [:first_name, :last_name, :email, :status]
       argument :role, Helpdesk.Accounts.User.Role, allow_nil?: false, default: :customer
@@ -267,6 +271,10 @@ defmodule Helpdesk.Accounts.User do
   end
 
   policies do
+    policy action(:list_assignees) do
+      authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :assign_tickets}
+    end
+
     policy action([:read, :create_user, :manage_user]) do
       authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :manage_users}
     end
@@ -312,6 +320,12 @@ defmodule Helpdesk.Accounts.User do
     end
 
     attribute :confirmed_at, :utc_datetime_usec
+  end
+
+  relationships do
+    has_many :team_memberships, Helpdesk.Support.TeamMembership do
+      destination_attribute :user_id
+    end
   end
 
   identities do

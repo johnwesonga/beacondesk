@@ -1,8 +1,12 @@
 defmodule HelpdeskWeb.HelpdeskLive.Form do
   alias HelpdeskWeb.TicketUploads
+  alias Helpdesk.Support.Team
+  alias Helpdesk.Accounts.User
+  alias Helpdesk.Accounts.Authorization
   use HelpdeskWeb, :live_view
 
   alias Helpdesk.Support.Ticket
+  require Ash.Query
 
   on_mount {HelpdeskWeb.LiveUserAuth, :live_user_required}
 
@@ -10,6 +14,20 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
   def mount(params, _session, socket) do
     current_user = socket.assigns.current_user
     ticket = load_ticket(params, current_user)
+    selected_team_id = if(ticket, do: ticket.team_id, else: nil)
+    can_assign? = Authorization.allowed?(current_user, :assign_tickets)
+
+    team_options =
+      if can_assign? do
+        Team
+        |> Ash.Query.filter(active == true)
+        |> Ash.Query.sort(name: :asc)
+        |> Ash.Query.select([:name, :id])
+        |> Ash.read!(actor: current_user)
+        |> Enum.map(&{&1.name, &1.id})
+      else
+        []
+      end
 
     {:ok,
      socket
@@ -19,6 +37,13 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
      |> assign(:priority_options, enum_options([:low, :medium, :high, :critical]))
      |> assign(:category_options, enum_options([:billing, :bug, :feature, :howto]))
      |> assign(:ticket, ticket)
+     |> assign(:can_assign?, can_assign?)
+     |> assign(:team_options, team_options)
+     |> assign(:selected_team_id, selected_team_id)
+     |> assign(
+       :assignee_options,
+       if(can_assign?, do: assignees(selected_team_id, current_user), else: [])
+     )
      |> assign(:uploaded_files, [])
      |> TicketUploads.allow()
      |> assign_form()}
@@ -26,6 +51,21 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
 
   @impl true
   def handle_event("validate", %{"ticket" => params}, socket) do
+    team_id = Map.get(params, "team_id", socket.assigns.selected_team_id)
+    team_id = if team_id == "", do: nil, else: team_id
+
+    {socket, params} =
+      if socket.assigns.can_assign? and team_id != socket.assigns.selected_team_id do
+        socket =
+          socket
+          |> assign(:selected_team_id, team_id)
+          |> assign(:assignee_options, assignees(team_id, socket.assigns.current_user))
+
+        {socket, Map.put(params, "assignee_id", "")}
+      else
+        {socket, params}
+      end
+
     form = AshPhoenix.Form.validate(socket.assigns.form, params)
     {:noreply, assign(socket, :form, form)}
   end
@@ -165,8 +205,27 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
                 required
               />
             </div>
+
+            <div :if={@can_assign?} id="ticket-assignment" class="grid gap-5 sm:grid-cols-2">
+              <.input
+                field={@form[:team_id]}
+                type="select"
+                label="Team"
+                prompt="No team"
+                options={@team_options}
+              />
+              <.input
+                field={@form[:assignee_id]}
+                type="select"
+                label="Assignee"
+                prompt="Unassigned"
+                options={@assignee_options}
+                disabled={is_nil(@selected_team_id)}
+              />
+            </div>
             <div
-              :if={@current_user.role != :customer}
+              :if={@can_assign?}
+              id="ticket-attachment-uploader"
               class="rounded-xl border border-slate-200 bg-white p-4"
             >
               <HelpdeskWeb.AttachmentUpload.picker upload={@uploads.attachments} />
@@ -229,5 +288,23 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
       label = value |> Atom.to_string() |> String.replace("_", " ") |> String.capitalize()
       {label, value}
     end)
+  end
+
+  defp assignees(nil, _), do: []
+  defp assignees("", _), do: []
+
+  defp assignees(team_id, current_user) do
+    case Ash.Type.cast_input(:uuid, team_id) do
+      {:ok, id} ->
+        User
+        |> Ash.Query.filter(exists(team_memberships, team_id == ^id))
+        |> Ash.Query.sort(email: :asc)
+        |> Ash.Query.select([:email, :id])
+        |> Ash.read!(action: :list_assignees, actor: current_user)
+        |> Enum.map(&{&1.email, &1.id})
+
+      _ ->
+        []
+    end
   end
 end
