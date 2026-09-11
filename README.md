@@ -172,6 +172,7 @@ The current configuration is a starting point, not a complete deployment setup.
 
 ## Documentation
 
+- [Feature list and roadmap](docs/features.md)
 - [Resource and workflow design](docs/helpdesk-description.md)
 - [BeaconDesk UI mockup](docs/beacondesk.html)
 - [Support authorization notes](docs/support-authorization.md) — historical notes;
