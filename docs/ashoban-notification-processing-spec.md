@@ -6,7 +6,11 @@ In progress. Phase 0 adds the Oban/AshOban runtime, migrations, and an explicit
 compatibility probe. Existing notification and email workers remain
 authoritative until the later cutover phases. Phase 1 adds directly testable
 outbox processing and final-error actions while sharing fan-out behavior with
-the legacy worker.
+the legacy worker. Phase 2 wires the real generated worker and atomically
+enqueues it whenever notification intent is captured in the enabled test path.
+The enqueue flag defaults off, execution remains manual in tests, and the
+legacy worker remains the production owner until Phase 3 performs the
+controlled switch.
 
 ## Objective
 

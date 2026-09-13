@@ -29,31 +29,42 @@ defmodule Helpdesk.Notifications.Capture do
         |> Enum.reject(&(&1 == event.user_id))
         |> Enum.filter(&eligible?(&1, ticket, record, kind))
 
-      Ash.create(
-        OutboxEvent,
-        %{
-          source_event_id: event.id,
-          kind: kind,
-          ticket_id: ticket.id,
-          message_id: if(match?(%Message{}, record), do: record.id),
-          actor_id: event.user_id,
-          candidate_recipient_ids: recipients,
-          occurred_at: event.inserted_at,
-          payload:
-            Map.put(
-              payload(event),
-              "email_recipient_ids",
-              Enum.filter(
-                recipients,
-                &Helpdesk.Notifications.Email.candidate?(Map.put(event, :kind, kind), &1)
-              )
+      create_and_schedule(%{
+        source_event_id: event.id,
+        kind: kind,
+        ticket_id: ticket.id,
+        message_id: if(match?(%Message{}, record), do: record.id),
+        actor_id: event.user_id,
+        candidate_recipient_ids: recipients,
+        occurred_at: event.inserted_at,
+        payload:
+          Map.put(
+            payload(event),
+            "email_recipient_ids",
+            Enum.filter(
+              recipients,
+              &Helpdesk.Notifications.Email.candidate?(Map.put(event, :kind, kind), &1)
             )
-        },
-        action: :enqueue,
-        authorize?: false
-      )
+          )
+      })
     else
       {:ok, :skipped}
+    end
+  end
+
+  defp create_and_schedule(attributes) do
+    with {:ok, event} <-
+           Ash.create(OutboxEvent, attributes, action: :enqueue, authorize?: false) do
+      if Application.get_env(:helpdesk, :notification_ash_oban_enqueue_enabled, false) do
+        try do
+          AshOban.run_trigger(event, :process_notification_event)
+          {:ok, event}
+        rescue
+          error -> {:error, error}
+        end
+      else
+        {:ok, event}
+      end
     end
   end
 

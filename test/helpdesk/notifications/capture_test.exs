@@ -1,7 +1,9 @@
 defmodule Helpdesk.Notifications.CaptureTest do
   use Helpdesk.DataCase
+  use Oban.Testing, repo: Helpdesk.Repo
+
   alias Helpdesk.Accounts.User
-  alias Helpdesk.Notifications.OutboxEvent
+  alias Helpdesk.Notifications.{OutboxEvent, OutboxEventWorker}
   alias Helpdesk.Support.{Message, Team, TeamMembership, Ticket}
 
   setup do
@@ -20,6 +22,12 @@ defmodule Helpdesk.Notifications.CaptureTest do
     assert event.ticket_id == ticket.id
     assert event.candidate_recipient_ids == [ctx.agent.id]
     assert event.message_id == nil
+
+    assert_enqueued(
+      worker: OutboxEventWorker,
+      queue: :notification_outbox,
+      args: %{primary_key: %{id: event.id}}
+    )
   end
 
   test "assignment suppresses self alerts and no-op assignments", ctx do
@@ -71,6 +79,7 @@ defmodule Helpdesk.Notifications.CaptureTest do
            }
 
     before = length(events())
+    jobs_before = length(all_enqueued(worker: OutboxEventWorker))
 
     assert {:error, :failed} =
              Repo.transaction(fn ->
@@ -80,6 +89,7 @@ defmodule Helpdesk.Notifications.CaptureTest do
 
     assert length(events()) == before
     assert length(Ash.read!(Ticket, authorize?: false)) == 1
+    assert length(all_enqueued(worker: OutboxEventWorker)) == jobs_before
   end
 
   test "outbox insert failure rolls back the ticket write", ctx do
@@ -98,6 +108,25 @@ defmodule Helpdesk.Notifications.CaptureTest do
     assert Ash.read!(Ticket, authorize?: false) == []
     assert Ash.read!(Helpdesk.Support.TicketEvent, authorize?: false) == []
     assert events() == []
+  end
+
+  test "AshOban job insertion failure rolls back ticket and outbox writes", ctx do
+    Ecto.Adapters.SQL.query!(Repo, """
+    CREATE TRIGGER fail_notification_job_capture BEFORE INSERT ON oban_jobs
+    BEGIN SELECT RAISE(ABORT, 'test job queue unavailable'); END
+    """)
+
+    assert {:error, _} =
+             Ash.create(Ticket, params(ctx),
+               action: :create_ticket,
+               actor: ctx.reporter,
+               authorize?: false
+             )
+
+    assert Ash.read!(Ticket, authorize?: false) == []
+    assert Ash.read!(Helpdesk.Support.TicketEvent, authorize?: false) == []
+    assert events() == []
+    assert all_enqueued(worker: OutboxEventWorker) == []
   end
 
   defp events, do: Ash.read!(OutboxEvent, authorize?: false)

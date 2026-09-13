@@ -36,6 +36,20 @@ defmodule Helpdesk.Notifications.OutboxEvent do
         actor_persister(:none)
         worker_module_name(Helpdesk.Notifications.OutboxEventCompatibilityWorker)
       end
+
+      trigger :process_notification_event do
+        action :process
+        where expr(status == :pending)
+        read_action :read
+        worker_read_action(:read)
+        scheduler_cron(false)
+        queue(:notification_outbox)
+        max_attempts(8)
+        on_error(:processing_failed)
+        trigger_once?(true)
+        actor_persister(:none)
+        worker_module_name(Helpdesk.Notifications.OutboxEventWorker)
+      end
     end
   end
 
