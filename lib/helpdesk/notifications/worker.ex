@@ -2,10 +2,9 @@ defmodule Helpdesk.Notifications.Worker do
   @moduledoc "Processes committed outbox rows into in-app notifications."
   use GenServer
   import Ecto.Query
-  require Ash.Query
   require Logger
-  alias Helpdesk.Notifications.{Notification, OutboxEvent}
-  alias Helpdesk.{Repo, Accounts.User}
+  alias Helpdesk.Notifications.{Fanout, OutboxEvent}
+  alias Helpdesk.Repo
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -70,16 +69,7 @@ defmodule Helpdesk.Notifications.Worker do
           {1, _} ->
             event = Repo.get!(OutboxEvent, id)
 
-            recipients =
-              event.candidate_recipient_ids |> Enum.uniq() |> Enum.reject(&(&1 == event.actor_id))
-
-            delivered =
-              Enum.filter(recipients, fn id ->
-                Helpdesk.Notifications.Capture.current_candidate?(event, id) and
-                  (is_nil(event.message_id) or
-                     not is_nil(Repo.get(Helpdesk.Support.Message, event.message_id))) and
-                  deliver(event, id)
-              end)
+            delivered = Fanout.deliver(event)
 
             Repo.update_all(from(e in OutboxEvent, where: e.id == ^id),
               set: [status: :processed, processed_at: now, updated_at: now, last_error_code: nil],
@@ -107,52 +97,6 @@ defmodule Helpdesk.Notifications.Worker do
     end
   rescue
     _ -> retry(id, now)
-  end
-
-  defp deliver(event, recipient_id) do
-    case Repo.get(User, recipient_id) do
-      %User{status: :active} = actor ->
-        notification =
-          Ash.create!(
-            Notification,
-            %{
-              outbox_event_id: event.id,
-              recipient_id: recipient_id,
-              ticket_id: event.ticket_id,
-              message_id: event.message_id,
-              kind: Atom.to_string(event.kind)
-            },
-            action: :deliver,
-            authorize?: false,
-            upsert?: true,
-            upsert_identity: :unique_event_recipient,
-            upsert_fields: []
-          )
-
-        if Notification
-           |> Ash.Query.filter(id == ^notification.id)
-           |> Ash.exists?(actor: actor) do
-          if Application.get_env(:helpdesk, :notification_email_enabled, false) and
-               recipient_id in Map.get(event.payload, "email_recipient_ids", []) and
-               Helpdesk.Notifications.Email.enabled?(recipient_id, notification.kind) do
-            Ash.create!(Helpdesk.Notifications.Delivery, %{notification_id: notification.id},
-              action: :enqueue,
-              authorize?: false,
-              upsert?: true,
-              upsert_identity: :unique_notification_channel,
-              upsert_fields: []
-            )
-          end
-
-          true
-        else
-          Repo.delete!(notification)
-          false
-        end
-
-      _ ->
-        false
-    end
   end
 
   defp retry(id, now) do

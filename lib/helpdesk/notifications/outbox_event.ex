@@ -61,6 +61,28 @@ defmodule Helpdesk.Notifications.OutboxEvent do
       public? false
       accept []
     end
+
+    update :process do
+      public? false
+      require_atomic? false
+      accept []
+      validate data_one_of(:status, [:pending])
+      change set_attribute(:status, :processed)
+      change set_attribute(:processed_at, &DateTime.utc_now/0)
+      change set_attribute(:last_error_code, nil)
+      change increment(:attempts)
+      change Helpdesk.Notifications.Changes.ProcessOutboxEvent
+    end
+
+    update :processing_failed do
+      public? false
+      require_atomic? false
+      accept []
+      validate data_one_of(:status, [:pending])
+      change set_attribute(:status, :failed)
+      change set_attribute(:last_error_code, "processing_failed")
+      change Helpdesk.Notifications.Changes.RecordOutboxFailure
+    end
   end
 
   policies do
