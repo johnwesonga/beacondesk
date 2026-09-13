@@ -6,6 +6,7 @@
 
 # General application configuration
 import Config
+config :helpdesk, notification_email_enabled: true, notification_from: "notifications@localhost"
 
 # These enable behaviors that will become the default in the next major
 # version of Ash. Setting them now opts your application into the new

@@ -10,6 +10,8 @@ defmodule Helpdesk.Notifications do
   resources do
     resource Helpdesk.Notifications.OutboxEvent
     resource Helpdesk.Notifications.Notification
+    resource Helpdesk.Notifications.Preference
+    resource Helpdesk.Notifications.Delivery
   end
 
   def list_notifications(actor, opts \\ []) do
@@ -26,6 +28,29 @@ defmodule Helpdesk.Notifications do
 
   def unread_count(actor) do
     Notification |> Ash.Query.filter(is_nil(read_at)) |> Ash.count(actor: actor)
+  end
+
+  def email_preferences(actor) do
+    with {:ok, preferences} <- Ash.read(Helpdesk.Notifications.Preference, actor: actor) do
+      saved = Map.new(preferences, &{&1.kind, &1.email_enabled})
+      {:ok, Map.new(Helpdesk.Notifications.Email.kinds(), &{&1, Map.get(saved, &1, true)})}
+    end
+  end
+
+  def set_email_preferences(actor, params) do
+    Helpdesk.Repo.transaction(fn ->
+      Enum.each(Helpdesk.Notifications.Email.kinds(), fn kind ->
+        case Ash.create(
+               Helpdesk.Notifications.Preference,
+               %{kind: kind, email_enabled: Map.get(params, kind, false)},
+               action: :set,
+               actor: actor
+             ) do
+          {:ok, _} -> :ok
+          {:error, error} -> Helpdesk.Repo.rollback(error)
+        end
+      end)
+    end)
   end
 
   def mark_read(actor, id) do

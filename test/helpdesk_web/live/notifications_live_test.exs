@@ -88,6 +88,19 @@ defmodule HelpdeskWeb.NotificationsLiveTest do
              live(build_conn(), "/notifications")
   end
 
+  test "saves email preferences without disabling in-app notifications", ctx do
+    notification(ctx)
+    {:ok, view, _} = live(ctx.conn, "/notifications")
+
+    view
+    |> form("#notification-preferences", preferences: %{resolved: "false"})
+    |> render_submit()
+
+    assert {:ok, preferences} = Helpdesk.Notifications.email_preferences(ctx.user)
+    refute preferences["resolved"]
+    assert has_element?(view, "#notification-badge", "1")
+  end
+
   test "unavailable notification cannot navigate", ctx do
     {:ok, view, _} = live(ctx.conn, "/notifications")
     render_click(view, "open", %{"id" => Ash.UUID.generate()})

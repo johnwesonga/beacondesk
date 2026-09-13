@@ -19,8 +19,8 @@ Statuses reflect the work discussed and implemented as of 2026-09-10.
 
 ### 1. Notifications and unread tracking
 
-**Status:** In-app notifications implemented; email and ticket-level unread
-tracking proposed.
+**Status:** In-app notifications and email delivery/preferences implemented;
+ticket-level unread tracking proposed.
 
 Help customers and agents notice updates that need a response.
 
@@ -30,8 +30,9 @@ Help customers and agents notice updates that need a response.
   with unseen replies independently of notification read state.
 - Later, add mentions, watchers and notification digests.
 
-**First increment:** Email preferences and durable email delivery for the existing
-notification events. See [Notifications technical specification](notifications-tech-spec.md).
+**Next increment:** Ticket-level unread tracking. See
+[Notifications technical specification](notifications-tech-spec.md) for the
+implemented delivery flow.
 
 ### 2. SLA targets and escalations
 

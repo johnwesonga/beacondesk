@@ -132,6 +132,18 @@ defmodule Helpdesk.Notifications.Worker do
         if Notification
            |> Ash.Query.filter(id == ^notification.id)
            |> Ash.exists?(actor: actor) do
+          if Application.get_env(:helpdesk, :notification_email_enabled, false) and
+               recipient_id in Map.get(event.payload, "email_recipient_ids", []) and
+               Helpdesk.Notifications.Email.enabled?(recipient_id, notification.kind) do
+            Ash.create!(Helpdesk.Notifications.Delivery, %{notification_id: notification.id},
+              action: :enqueue,
+              authorize?: false,
+              upsert?: true,
+              upsert_identity: :unique_notification_channel,
+              upsert_fields: []
+            )
+          end
+
           true
         else
           Repo.delete!(notification)

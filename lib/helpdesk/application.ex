@@ -12,7 +12,9 @@ defmodule Helpdesk.Application do
       Helpdesk.Repo,
       {DNSCluster, query: Application.get_env(:helpdesk, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Helpdesk.PubSub},
+      {Task.Supervisor, name: Helpdesk.NotificationTasks},
       Helpdesk.Notifications.Worker,
+      Helpdesk.Notifications.EmailWorker,
       # Start a worker by calling: Helpdesk.Worker.start_link(arg)
       # {Helpdesk.Worker, arg},
       # Start to serve requests, typically the last entry

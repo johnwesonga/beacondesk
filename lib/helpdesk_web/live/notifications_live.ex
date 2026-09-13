@@ -15,7 +15,8 @@ defmodule HelpdeskWeb.NotificationsLive do
        more?: false,
        next_cursor: nil
      )
-     |> load_notifications()}
+     |> load_notifications()
+     |> load_preferences()}
   end
 
   @impl true
@@ -24,6 +25,16 @@ defmodule HelpdeskWeb.NotificationsLive do
   end
 
   @impl true
+  def handle_event("save_preferences", %{"preferences" => params}, socket) do
+    case Notifications.set_email_preferences(socket.assigns.current_user, params) do
+      {:ok, _} ->
+        {:noreply, socket |> load_preferences() |> put_flash(:info, "Email preferences saved.")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not save email preferences.")}
+    end
+  end
+
   def handle_event("filter", %{"filter" => filter}, socket) when filter in ["all", "unread"] do
     {:noreply,
      socket |> assign(unread?: filter == "unread", cursors: [nil]) |> load_notifications()}
@@ -63,6 +74,19 @@ defmodule HelpdeskWeb.NotificationsLive do
       {:error, _} ->
         {:noreply,
          socket |> put_flash(:error, "This notification is no longer available.") |> refresh()}
+    end
+  end
+
+  defp load_preferences(socket) do
+    case Notifications.email_preferences(socket.assigns.current_user) do
+      {:ok, values} ->
+        assign(socket,
+          preference_form: to_form(values, as: :preferences),
+          email_kinds: Helpdesk.Notifications.Email.kinds()
+        )
+
+      {:error, _} ->
+        assign(socket, preference_form: nil, email_kinds: [])
     end
   end
 
@@ -210,6 +234,21 @@ defmodule HelpdeskWeb.NotificationsLive do
             Next
           </button>
         </nav>
+        <details :if={@preference_form} class="rounded-2xl border border-slate-200 bg-white p-5">
+          <summary class="cursor-pointer font-semibold">Email preferences</summary>
+          <p class="my-3 text-sm text-slate-500">
+            Choose email updates for tickets you report or are assigned to. In-app notifications remain enabled. Account confirmation and password reset emails are unaffected.
+          </p>
+          <.form for={@preference_form} id="notification-preferences" phx-submit="save_preferences">
+            <.input
+              :for={kind <- @email_kinds}
+              field={@preference_form[kind]}
+              type="checkbox"
+              label={label(kind)}
+            />
+            <.button id="save-notification-preferences" type="submit">Save preferences</.button>
+          </.form>
+        </details>
       </div>
     </Layouts.app>
     """

@@ -45,7 +45,7 @@ defmodule Helpdesk.Notifications.CaptureTest do
     note = Enum.find(events(), &(&1.kind == :internal_note))
     assert Enum.sort(reply.candidate_recipient_ids) == Enum.sort([ctx.reporter.id, ctx.agent.id])
     assert note.candidate_recipient_ids == [ctx.agent.id]
-    assert reply.payload == %{}
+    assert reply.payload == %{"email_recipient_ids" => [ctx.reporter.id]}
     assert reply.message_id != nil
   end
 
@@ -63,7 +63,13 @@ defmodule Helpdesk.Notifications.CaptureTest do
     Ash.update!(ticket, %{status: :resolved}, action: :change_status, actor: ctx.admin)
     event = Enum.find(events(), &(&1.kind == :resolved))
     assert event.candidate_recipient_ids == [ctx.reporter.id]
-    assert event.payload == %{"old_status" => "new", "new_status" => "resolved"}
+
+    assert event.payload == %{
+             "old_status" => "new",
+             "new_status" => "resolved",
+             "email_recipient_ids" => [ctx.reporter.id]
+           }
+
     before = length(events())
 
     assert {:error, :failed} =

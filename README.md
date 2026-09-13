@@ -17,7 +17,8 @@ support tickets, conversations, attachments and teams.
 - Password authentication, account confirmation and password reset.
 
 In-app notifications include a live unread badge, a paginated inbox and read
-actions. Email delivery is next. See the [notification specification](docs/notifications-tech-spec.md).
+actions. Email notifications use Swoosh locally and Resend in production, with
+per-category preferences and durable retries. See the [notification specification](docs/notifications-tech-spec.md).
 
 ## Stack
 
@@ -152,6 +153,36 @@ an appropriate database default or a staged backfill.
 
 ## Production configuration
 
+### Notification email
+
+Apply the new migrations with `mix ash.migrate` before starting the updated app.
+Development uses the local Swoosh mailbox at `/dev/mailbox`; only confirmed,
+active recipients receive notification emails. No real email is sent by the
+local adapter.
+
+Production uses `Swoosh.Adapters.Resend` and the existing Req API client. Set:
+
+```sh
+export RESEND_API_KEY="your-resend-api-key"
+export NOTIFICATION_FROM="support@your-verified-domain.com"
+export NOTIFICATION_EMAIL_ENABLED="true"
+```
+
+The key and sender are required in production. The notification email flag
+defaults to `false` there; enable it when the sender is ready. The sender also
+applies to account confirmation and password reset messages, which are not
+controlled by notification preferences or this flag.
+
+Users manage email preferences on `/notifications`. Team-only alerts stay
+in-app. Unconfirmed recipients are skipped rather than emailed later. Existing
+historical events are not backfilled into email deliveries. While email is
+disabled, no new deliveries are queued and pending deliveries remain paused.
+
+See the [notification operations notes](docs/notifications-tech-spec.md#email-operations)
+for queue inspection, retries and delivery limitations.
+
+### Application settings
+
 `config/runtime.exs` reads the following settings:
 
 | Variable | Purpose |
@@ -166,8 +197,7 @@ an appropriate database default or a staged backfill.
 | `DNS_CLUSTER_QUERY` | Optional DNS cluster discovery |
 
 Production uploads also require the storage variables described above. Configure
-bucket CORS for the production origin and a production Swoosh delivery adapter;
-the default mailer uses local storage. Persist and back up the SQLite database.
+bucket CORS for the production origin. Persist and back up the SQLite database.
 The current configuration is a starting point, not a complete deployment setup.
 
 ## Documentation

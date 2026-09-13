@@ -39,7 +39,15 @@ defmodule Helpdesk.Notifications.Capture do
           actor_id: event.user_id,
           candidate_recipient_ids: recipients,
           occurred_at: event.inserted_at,
-          payload: payload(event)
+          payload:
+            Map.put(
+              payload(event),
+              "email_recipient_ids",
+              Enum.filter(
+                recipients,
+                &Helpdesk.Notifications.Email.candidate?(Map.put(event, :kind, kind), &1)
+              )
+            )
         },
         action: :enqueue,
         authorize?: false

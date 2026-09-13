@@ -14,7 +14,7 @@ defmodule Helpdesk.Accounts.User.Senders.SendNewUserConfirmationEmail do
   def send(user, token, opts) do
     new()
     # TODO: Replace with your email
-    |> from({"noreply", "noreply@example.com"})
+    |> from({"BeaconDesk", Application.fetch_env!(:helpdesk, :notification_from)})
     |> to(to_string(user.email))
     |> subject(subject(opts))
     |> html_body(body(token, opts))

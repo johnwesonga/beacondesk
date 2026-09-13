@@ -1,6 +1,6 @@
 # Helpdesk notifications technical specification
 
-Status: proposed · Date: 2026-09-10
+Status: core delivery implemented · Updated: 2026-09-11
 
 ## Objective
 
@@ -30,7 +30,8 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
    events every five seconds, and broadcasts private invalidations after commit.
    Configure `:notification_worker_enabled` (false in tests) and
    `:notification_poll_interval` on `:helpdesk`. Tests invoke `Worker.run_once/1`
-   with a controlled time. No email delivery records are created yet.
+   with a controlled time. Eligible email delivery records are now created in
+   the same fan-out transaction.
    For this SQLite-only in-app step, claiming and fan-out share one short writer
    transaction, so crashes roll back the claim instead of requiring persistent
    leases. The lease protocol below remains the design for external email I/O.
@@ -41,7 +42,51 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
    hooks subscribe to private invalidations and coalesce count/list refreshes;
    authenticated workspace layouts display the bell and capped unread badge.
    Mount/reconnect reloads persisted state. Pagination resets on a new visit.
-5. **Next: email.** Preferences, delivery resource, retries and monitoring.
+5. **Complete: email delivery.** Per-category preferences on `/notifications`,
+   durable delivery rows, a separate supervised email poller, 60-second leases,
+   bounded provider calls, eight-attempt retries, delivery telemetry and
+   administrator queue inspection/retry operations. Swoosh Local is used in
+   development and Swoosh Resend in production. Direct email candidates are
+   captured in outbox metadata; older events without this field stay in-app.
+
+## Email operations
+
+Production requires `RESEND_API_KEY` and `NOTIFICATION_FROM` (a sender verified
+with Resend). Set `NOTIFICATION_EMAIL_ENABLED=true` to enable notification email;
+its production default is false. Configure `PHX_HOST` correctly for ticket links.
+These settings never belong in committed files. Development uses the local
+mailbox and tests use adapters that do not contact a provider.
+
+The email poller runs separately from in-app processing. It checks active and
+confirmed accounts, current routing, notification visibility and preferences
+immediately before each attempt. Network calls run outside repository transactions
+with a 15-second task timeout; the Req client disables automatic retries so the
+durable worker controls them. `sent` means the provider accepted the request,
+not proof of delivery to a recipient's inbox. Bounce/webhook handling is future work.
+
+The delivery UUID becomes the Resend idempotency key. Resend retains keys for
+24 hours; delayed/manual retries after that window may duplicate an accepted
+email. A changed request payload using an existing key fails rather than silently
+using a new key. See [Resend idempotency documentation](https://resend.com/docs/dashboard/emails/idempotency-keys).
+
+Authorized operations from IEx (pass a persisted active admin):
+
+```elixir
+Helpdesk.Notifications.Operations.status(admin)
+Helpdesk.Notifications.Operations.retry_failed(admin, :email, delivery_id)
+Helpdesk.Notifications.Operations.retry_failed(admin, :outbox, event_id)
+```
+
+Retries only transition failed records to pending and preserve their IDs. Review
+the failure/provider outcome first. Sent/skipped deliveries are not replayed.
+Processing rechecks recipient eligibility after an operator retries an event.
+Telemetry event `[:helpdesk, :notifications, :email, :delivery]` reports count,
+status and delivery ID without message content or provider error bodies.
+
+Retention cleanup, a queue dashboard, digests and bounce handling remain follow-up
+work. The retention section below describes the proposed policy; no automatic
+deletion job is enabled. Foreign keys currently prevent deleting referenced
+notifications/users/tickets until dependent records are explicitly handled.
 
 ## Existing integration points
 

@@ -21,6 +21,14 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  config :helpdesk, Helpdesk.Mailer,
+    adapter: Swoosh.Adapters.Resend,
+    api_key: System.fetch_env!("RESEND_API_KEY")
+
+  config :helpdesk,
+    notification_from: System.fetch_env!("NOTIFICATION_FROM"),
+    notification_email_enabled: System.get_env("NOTIFICATION_EMAIL_ENABLED", "false") == "true"
+
   # Absolute path to the SQLite file on persistent, writable storage.
   database_path =
     System.get_env("DATABASE_PATH") ||
