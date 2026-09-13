@@ -10,7 +10,8 @@ defmodule Helpdesk.Notifications.OutboxEvent do
     otp_app: :helpdesk,
     domain: Helpdesk.Notifications,
     data_layer: AshSqlite.DataLayer,
-    authorizers: [Ash.Policy.Authorizer]
+    authorizers: [Ash.Policy.Authorizer],
+    extensions: [AshOban]
 
   sqlite do
     table "notification_outbox_events"
@@ -18,6 +19,23 @@ defmodule Helpdesk.Notifications.OutboxEvent do
 
     custom_indexes do
       index [:status, :next_attempt_at]
+    end
+  end
+
+  oban do
+    triggers do
+      trigger :compatibility_probe do
+        action :ash_oban_compatibility_probe
+        where expr(status == :pending)
+        read_action :read
+        worker_read_action(:read)
+        scheduler_cron(false)
+        queue(:notification_outbox)
+        max_attempts(2)
+        trigger_once?(true)
+        actor_persister(:none)
+        worker_module_name(Helpdesk.Notifications.OutboxEventCompatibilityWorker)
+      end
     end
   end
 
@@ -38,9 +56,18 @@ defmodule Helpdesk.Notifications.OutboxEvent do
         :occurred_at
       ]
     end
+
+    update :ash_oban_compatibility_probe do
+      public? false
+      accept []
+    end
   end
 
   policies do
+    bypass AshOban.Checks.AshObanInteraction do
+      authorize_if always()
+    end
+
     policy always() do
       forbid_if always()
     end

@@ -50,6 +50,8 @@ defmodule Helpdesk.MixProject do
       {:ash_authentication_phoenix, "~> 2.0"},
       {:sourceror, "~> 1.8", only: [:dev, :test]},
       {:ash, "~> 3.0"},
+      {:ash_oban, "~> 0.8"},
+      {:oban, "~> 2.24"},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.0"},
       {:phoenix_ecto, "~> 4.5"},

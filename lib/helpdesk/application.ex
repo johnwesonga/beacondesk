@@ -10,6 +10,11 @@ defmodule Helpdesk.Application do
     children = [
       HelpdeskWeb.Telemetry,
       Helpdesk.Repo,
+      {Oban,
+       AshOban.config(
+         [Helpdesk.Notifications],
+         Application.fetch_env!(:helpdesk, Oban)
+       )},
       {DNSCluster, query: Application.get_env(:helpdesk, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Helpdesk.PubSub},
       {Task.Supervisor, name: Helpdesk.NotificationTasks},

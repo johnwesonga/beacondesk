@@ -79,6 +79,12 @@ config :helpdesk, HelpdeskWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :helpdesk, Helpdesk.Mailer, adapter: Swoosh.Adapters.Local
 
+config :helpdesk, Oban,
+  engine: Oban.Engines.Lite,
+  repo: Helpdesk.Repo,
+  queues: [notification_outbox: 1],
+  plugins: [{Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60}]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
