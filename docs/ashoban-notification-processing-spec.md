@@ -8,9 +8,10 @@ authoritative until the later cutover phases. Phase 1 adds directly testable
 outbox processing and final-error actions while sharing fan-out behavior with
 the legacy worker. Phase 2 wires the real generated worker and atomically
 enqueues it whenever notification intent is captured in the enabled test path.
-The enqueue flag defaults off, execution remains manual in tests, and the
-legacy worker remains the production owner until Phase 3 performs the
-controlled switch.
+Phase 3 replaces the temporary flag with a validated `:legacy`/`:ash_oban`
+ownership mode. Development uses AshOban, production defaults safely to legacy
+unless `NOTIFICATION_PROCESSING_MODE=ash_oban` is set, and each mode disables
+the competing processor.
 
 ## Objective
 
@@ -326,6 +327,22 @@ recipient IDs, user IDs, raw exceptions, or full Oban arguments.
 - Compare processing latency, failed counts, and duplicate behavior.
 - Ensure only one processor owns outbox events at a time.
 - Remove `Notifications.Worker` from the supervision tree after validation.
+
+Implemented through the single `:notification_processing_mode` setting:
+
+- `:legacy` supervises `Notifications.Worker`, does not enqueue new AshOban
+  jobs, and starts Oban with queues disabled;
+- `:ash_oban` omits `Notifications.Worker`, atomically enqueues each captured
+  event, and enables the bounded `notification_outbox` queue;
+- development and tests use `:ash_oban`;
+- production defaults to `:legacy`; and
+- staging or production opt in with
+  `NOTIFICATION_PROCESSING_MODE=ash_oban` followed by an application restart.
+
+Rollback requires setting `NOTIFICATION_PROCESSING_MODE=legacy` and restarting.
+Pending outbox rows are then handled by the legacy poller. AshOban jobs remain
+durable but cannot execute while its queue is disabled; if AshOban is enabled
+again later, jobs whose records were already processed are rejected as stale.
 
 ### Phase 4 — Operational hardening
 

@@ -21,6 +21,15 @@ if System.get_env("PHX_SERVER") do
 end
 
 if config_env() == :prod do
+  notification_processing_mode =
+    case System.get_env("NOTIFICATION_PROCESSING_MODE", "legacy") do
+      "legacy" -> :legacy
+      "ash_oban" -> :ash_oban
+      mode -> raise "Invalid NOTIFICATION_PROCESSING_MODE: #{inspect(mode)}"
+    end
+
+  config :helpdesk, notification_processing_mode: notification_processing_mode
+
   config :helpdesk, Helpdesk.Mailer,
     adapter: Swoosh.Adapters.Resend,
     api_key: System.fetch_env!("RESEND_API_KEY")

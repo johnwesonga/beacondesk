@@ -10,7 +10,7 @@ defmodule Helpdesk.Notifications.Worker do
 
   @impl true
   def init(_opts) do
-    if Application.get_env(:helpdesk, :notification_worker_enabled, true), do: schedule()
+    schedule()
     {:ok, nil}
   end
 

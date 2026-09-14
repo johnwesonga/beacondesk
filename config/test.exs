@@ -1,6 +1,6 @@
 import Config
-config :helpdesk, notification_worker_enabled: false
-config :helpdesk, notification_ash_oban_enqueue_enabled: true
+config :helpdesk, notification_processing_mode: :ash_oban
+config :helpdesk, notification_email_worker_enabled: false
 config :helpdesk, Oban, testing: :manual
 config :helpdesk, token_signing_secret: "zdCwA+HfJe3VeEnscypAgnr6YsP96R8v"
 config :bcrypt_elixir, log_rounds: 1

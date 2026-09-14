@@ -85,8 +85,7 @@ config :helpdesk, Oban,
   queues: [notification_outbox: 1],
   plugins: [{Oban.Plugins.Pruner, max_age: 7 * 24 * 60 * 60}]
 
-# Phase 3 will switch production ownership from the legacy poller to AshOban.
-config :helpdesk, notification_ash_oban_enqueue_enabled: false
+config :helpdesk, notification_processing_mode: :legacy
 
 # Configure esbuild (the version is required)
 config :esbuild,

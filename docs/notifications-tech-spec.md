@@ -28,10 +28,11 @@ small changes; completed infrastructure does not yet imply user-facing delivery.
    paginated list/unread count/mark-read domain functions, idempotent fan-out and
    supervised worker. The worker rechecks routing and access, processes up to 25
    events every five seconds, and broadcasts private invalidations after commit.
-   Configure `:notification_worker_enabled` (false in tests) and
-   `:notification_poll_interval` on `:helpdesk`. Tests invoke `Worker.run_once/1`
-   with a controlled time. Eligible email delivery records are now created in
-   the same fan-out transaction.
+   `:notification_processing_mode` selects either `:legacy` or `:ash_oban` as
+   the sole outbox owner. Configure `:notification_poll_interval` only while
+   using the legacy mode. Tests invoke `Worker.run_once/1` with a controlled
+   time. Eligible email delivery records are now created in the same fan-out
+   transaction.
    For this SQLite-only in-app step, claiming and fan-out share one short writer
    transaction, so crashes roll back the claim instead of requiring persistent
    leases. The lease protocol below remains the design for external email I/O.

@@ -1,5 +1,6 @@
 import Config
 config :ash, policies: [show_policy_breakdowns?: true]
+config :helpdesk, notification_processing_mode: :ash_oban
 
 # SQLite database file (keep the existing filename to preserve local data).
 config :helpdesk, Helpdesk.Repo,

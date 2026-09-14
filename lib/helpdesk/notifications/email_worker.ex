@@ -12,7 +12,7 @@ defmodule Helpdesk.Notifications.EmailWorker do
 
   @impl true
   def init(_opts) do
-    if Application.get_env(:helpdesk, :notification_worker_enabled, true), do: schedule()
+    if Application.get_env(:helpdesk, :notification_email_worker_enabled, true), do: schedule()
     {:ok, nil}
   end
 

@@ -7,25 +7,28 @@ defmodule Helpdesk.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      HelpdeskWeb.Telemetry,
-      Helpdesk.Repo,
-      {Oban,
-       AshOban.config(
-         [Helpdesk.Notifications],
-         Application.fetch_env!(:helpdesk, Oban)
-       )},
-      {DNSCluster, query: Application.get_env(:helpdesk, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Helpdesk.PubSub},
-      {Task.Supervisor, name: Helpdesk.NotificationTasks},
-      Helpdesk.Notifications.Worker,
-      Helpdesk.Notifications.EmailWorker,
-      # Start a worker by calling: Helpdesk.Worker.start_link(arg)
-      # {Helpdesk.Worker, arg},
-      # Start to serve requests, typically the last entry
-      HelpdeskWeb.Endpoint,
-      {AshAuthentication.Supervisor, [otp_app: :helpdesk]}
-    ]
+    mode = Helpdesk.Notifications.ProcessingMode.current()
+
+    oban_config =
+      [Helpdesk.Notifications]
+      |> AshOban.config(Application.fetch_env!(:helpdesk, Oban))
+      |> Helpdesk.Notifications.ProcessingMode.oban_config(mode)
+
+    children =
+      [
+        HelpdeskWeb.Telemetry,
+        Helpdesk.Repo,
+        {Oban, oban_config},
+        {DNSCluster, query: Application.get_env(:helpdesk, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: Helpdesk.PubSub},
+        {Task.Supervisor, name: Helpdesk.NotificationTasks}
+      ] ++
+        Helpdesk.Notifications.ProcessingMode.outbox_worker_children(mode) ++
+        [
+          Helpdesk.Notifications.EmailWorker,
+          HelpdeskWeb.Endpoint,
+          {AshAuthentication.Supervisor, [otp_app: :helpdesk]}
+        ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

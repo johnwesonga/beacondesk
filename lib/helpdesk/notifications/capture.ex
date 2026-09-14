@@ -55,7 +55,7 @@ defmodule Helpdesk.Notifications.Capture do
   defp create_and_schedule(attributes) do
     with {:ok, event} <-
            Ash.create(OutboxEvent, attributes, action: :enqueue, authorize?: false) do
-      if Application.get_env(:helpdesk, :notification_ash_oban_enqueue_enabled, false) do
+      if Helpdesk.Notifications.ProcessingMode.ash_oban?() do
         try do
           AshOban.run_trigger(event, :process_notification_event)
           {:ok, event}

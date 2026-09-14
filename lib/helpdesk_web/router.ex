@@ -4,6 +4,7 @@ defmodule HelpdeskWeb.Router do
   use AshAuthentication.Phoenix.Router
 
   import AshAuthentication.Plug.Helpers
+  import Oban.Web.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -23,6 +24,7 @@ defmodule HelpdeskWeb.Router do
 
   scope "/", HelpdeskWeb do
     pipe_through :browser
+    oban_dashboard("/oban")
 
     ash_authentication_live_session :authenticated_routes do
       # in each liveview, add one of the following at the top of the module:
