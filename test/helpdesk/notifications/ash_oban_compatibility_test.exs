@@ -12,6 +12,7 @@ defmodule Helpdesk.Notifications.AshObanCompatibilityTest do
     assert config[:queues][:notification_outbox] == 1
     assert Keyword.has_key?(config, :plugins)
     refute config[:stage_interval] == :infinity
+    assert Application.fetch_env!(:helpdesk, Helpdesk.Repo)[:busy_timeout] == 5_000
   end
 
   test "explicit trigger enqueues a minimal, bounded job" do

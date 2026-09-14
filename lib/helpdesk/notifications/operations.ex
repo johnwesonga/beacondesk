@@ -6,22 +6,28 @@ defmodule Helpdesk.Notifications.Operations do
 
   def status(actor) do
     with :ok <- authorize(actor) do
+      now = DateTime.utc_now()
+
       {:ok,
        %{
          outbox: counts(OutboxEvent),
          email: counts(Delivery),
-         oldest_pending_email:
-           Repo.one(from d in Delivery, where: d.status == :pending, select: min(d.inserted_at))
+         oldest_pending_outbox: oldest_pending(OutboxEvent),
+         oldest_pending_email: oldest_pending(Delivery),
+         overdue_outbox:
+           Repo.one(
+             from e in OutboxEvent,
+               where: e.status == :pending and e.next_attempt_at <= ^now,
+               select: count(e.id)
+           )
        }}
     end
   end
 
-  def retry_failed(actor, queue, id) when queue in [:email, :outbox] do
+  def retry_failed(actor, :email, id) do
     with :ok <- authorize(actor), {:ok, id} <- Ash.Type.cast_input(:uuid, id) do
-      resource = if queue == :email, do: Delivery, else: OutboxEvent
-
       {count, _} =
-        Repo.update_all(from(e in resource, where: e.id == ^id and e.status == :failed),
+        Repo.update_all(from(e in Delivery, where: e.id == ^id and e.status == :failed),
           set: [
             status: :pending,
             attempts: 0,
@@ -37,8 +43,57 @@ defmodule Helpdesk.Notifications.Operations do
     end
   end
 
+  def retry_failed(actor, :outbox, id) do
+    with :ok <- authorize(actor),
+         {:ok, id} <- Ash.Type.cast_input(:uuid, id) do
+      retry_outbox(id)
+    end
+  end
+
+  defp retry_outbox(id) do
+    try do
+      Repo.transaction(fn ->
+        now = DateTime.utc_now()
+
+        {count, _} =
+          Repo.update_all(from(e in OutboxEvent, where: e.id == ^id and e.status == :failed),
+            set: [
+              status: :pending,
+              attempts: 0,
+              next_attempt_at: now,
+              lease_token: nil,
+              lease_expires_at: nil,
+              processed_at: nil,
+              last_error_code: nil,
+              updated_at: now
+            ]
+          )
+
+        if count == 1 and Helpdesk.Notifications.ProcessingMode.ash_oban?() do
+          event = Repo.get!(OutboxEvent, id)
+
+          AshOban.run_trigger(event, :process_notification_event,
+            args: %{retry_nonce: Ash.UUID.generate()}
+          )
+        end
+
+        count
+      end)
+      |> case do
+        {:ok, count} -> {:ok, count}
+        {:error, error} -> {:error, error}
+      end
+    rescue
+      error -> {:error, error}
+    end
+  end
+
   defp counts(resource) do
     Repo.all(from e in resource, group_by: e.status, select: {e.status, count(e.id)}) |> Map.new()
+  end
+
+  defp oldest_pending(resource) do
+    Repo.one(from e in resource, where: e.status == :pending, select: min(e.inserted_at))
   end
 
   defp authorize(%{id: id}) do

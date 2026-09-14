@@ -59,6 +59,8 @@ config :helpdesk,
   generators: [timestamp_type: :utc_datetime],
   ash_domains: [Helpdesk.Accounts, Helpdesk.Support, Helpdesk.Audit, Helpdesk.Notifications]
 
+config :helpdesk, Helpdesk.Repo, busy_timeout: 5_000
+
 # Configures the endpoint
 config :helpdesk, HelpdeskWeb.Endpoint,
   url: [host: "localhost"],

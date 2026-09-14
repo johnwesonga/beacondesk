@@ -79,6 +79,20 @@ defmodule Helpdesk.Notifications.AshObanProcessingTest do
     assert Ash.read!(Notification, authorize?: false) == []
   end
 
+  test "a persisted overdue job remains executable", ctx do
+    inserted =
+      AshOban.run_trigger(ctx.event, :process_notification_event,
+        scheduled_at: DateTime.add(DateTime.utc_now(), -60, :second)
+      )
+
+    persisted = Repo.get!(Oban.Job, inserted.id)
+    assert persisted.state == "scheduled"
+    assert DateTime.compare(persisted.scheduled_at, DateTime.utc_now()) == :lt
+
+    assert {:ok, %OutboxEvent{status: :processed}} =
+             perform_job(OutboxEventWorker, persisted.args)
+  end
+
   defp create_event!(ticket_id, recipient_id) do
     Ash.create!(
       OutboxEvent,

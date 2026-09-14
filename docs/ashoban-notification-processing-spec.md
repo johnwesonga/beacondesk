@@ -353,6 +353,13 @@ again later, jobs whose records were already processed are rejected as stale.
 - Tune SQLite pool size, queue concurrency, and busy timeout.
 - Remove legacy polling configuration.
 
+Implemented operationally with administrator-only queue summaries and retry
+operations, an administrator-protected Oban Web dashboard, persisted overdue
+job recovery coverage, queue concurrency of one, and a five-second SQLite busy
+timeout. The legacy poll interval and worker module remain intentionally while
+production still defaults to `:legacy`; remove them only after the production
+AshOban cutover and rollback window have been completed.
+
 ### Phase 5 — Reassess email delivery
 
 Evaluate `Delivery` as a separate AshOban migration. Do not assume that success

@@ -22,9 +22,17 @@ defmodule HelpdeskWeb.Router do
     plug :set_actor, :user
   end
 
+  pipeline :administrator do
+    plug HelpdeskWeb.Plugs.RequireAdministrator
+  end
+
+  scope "/admin" do
+    pipe_through [:browser, :administrator]
+    oban_dashboard("/oban")
+  end
+
   scope "/", HelpdeskWeb do
     pipe_through :browser
-    oban_dashboard("/oban")
 
     ash_authentication_live_session :authenticated_routes do
       # in each liveview, add one of the following at the top of the module:

@@ -16,6 +16,11 @@ defmodule HelpdeskWeb.HelpdeskLive.AdminTest do
     assert has_element?(view, "#first-reply", "—")
     assert has_element?(view, "#satisfaction", "Not collected yet")
     assert has_element?(view, "#queues-empty")
+    assert has_element?(view, "#notification-queue-health")
+    assert has_element?(view, "#outbox-pending", "0")
+    assert has_element?(view, "#outbox-failed", "0")
+    assert has_element?(view, "#outbox-overdue", "0")
+    assert has_element?(view, "#open-oban-dashboard[href='/admin/oban']")
     assert has_element?(view, "nav a[aria-current=page][href='/admin']")
     assert has_element?(view, "#manage-teams[href='/teams']")
 
