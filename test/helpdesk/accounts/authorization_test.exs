@@ -12,6 +12,7 @@ defmodule Helpdesk.Accounts.AuthorizationTest do
     end
 
     for permission <- [
+          :open_tickets_for_customers,
           :assign_tickets,
           :edit_tickets,
           :change_ticket_status,

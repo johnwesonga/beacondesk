@@ -12,6 +12,7 @@ defmodule Helpdesk.Accounts.Authorization do
   @permissions [
     :view_operations,
     :create_tickets,
+    :open_tickets_for_customers,
     :read_tickets,
     :edit_tickets,
     :assign_tickets,
@@ -29,6 +30,7 @@ defmodule Helpdesk.Accounts.Authorization do
     admin: @permissions,
     agent: [
       :create_tickets,
+      :open_tickets_for_customers,
       :read_tickets,
       :edit_tickets,
       :assign_tickets,
