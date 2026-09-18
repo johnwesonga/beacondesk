@@ -133,7 +133,6 @@ defmodule HelpdeskWeb.Layouts do
               New ticket
             </.workspace_link>
             <.workspace_link
-              :if={@customer?}
               href={~p"/help"}
               icon="hero-book-open"
               active={@current_page == :help}
@@ -176,6 +175,37 @@ defmodule HelpdeskWeb.Layouts do
           {render_slot(@inner_block)}
         </main>
       </div>
+      <.flash_group flash={@flash} />
+    </div>
+    """
+  end
+
+  def app(%{current_page: :help} = assigns) do
+    ~H"""
+    <div data-theme="light" class="min-h-screen bg-slate-50 text-slate-800">
+      <a href="#main-content" class="sr-only focus:not-sr-only focus:block focus:p-3">
+        Skip to content
+      </a>
+      <header class="border-b border-slate-200 bg-white">
+        <nav
+          aria-label="Help center navigation"
+          class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4"
+        >
+          <.link
+            id="public-help-home"
+            navigate={~p"/help"}
+            class="inline-flex items-center gap-2 text-lg font-bold"
+          >
+            <.icon name="hero-lifebuoy" class="size-6 text-sky-600" />BeaconDesk Help center
+          </.link>
+          <.link id="public-help-sign-in" href={~p"/sign-in"} class="btn btn-sm btn-primary">
+            Sign in
+          </.link>
+        </nav>
+      </header>
+      <main id="main-content" class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
+        {render_slot(@inner_block)}
+      </main>
       <.flash_group flash={@flash} />
     </div>
     """

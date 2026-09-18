@@ -51,7 +51,8 @@ defmodule HelpdeskWeb.Router do
       live "/admin", HelpdeskLive.Admin.Index, :index
       live "/inbox", HelpdeskLive.Agent, :index
       live "/portal", HelpdeskLive.Customer, :overview
-      live "/help", HelpdeskLive.Customer, :help
+      live "/help", KnowledgeBaseLive.Index, :index
+      live "/help/:slug", KnowledgeBaseLive.Show, :show
       live "/tickets/:id", HelpdeskLive.Tickets.View, :show
       live "/tickets", HelpdeskLive.Index, :index
       live "/notifications", NotificationsLive, :index
