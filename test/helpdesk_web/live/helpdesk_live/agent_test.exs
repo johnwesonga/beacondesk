@@ -110,6 +110,8 @@ defmodule HelpdeskWeb.HelpdeskLive.AgentTest do
            )
 
     assert has_element?(view, "#attachments-#{nested.id}")
+    assert has_element?(view, "#attachment-thumbnail-#{direct.id}")
+    assert has_element?(view, "#attachment-thumbnail-#{nested.id}")
     refute has_element?(view, "#attachments-#{private.id}")
     view |> element("#tickets-#{other.id}") |> render_click()
     assert has_element?(view, "#inbox-attachments-empty:only-child")
@@ -154,10 +156,28 @@ defmodule HelpdeskWeb.HelpdeskLive.AgentTest do
       ])
 
     render_upload(upload, "evidence.pdf", 100)
+
+    Req.Test.stub(Helpdesk.AttachmentStore, fn conn ->
+      Plug.Conn.send_resp(conn, 404, "missing")
+    end)
+
+    Req.Test.allow(Helpdesk.AttachmentStore, self(), view.pid)
+    view |> form("#agent-attachments-form") |> render_submit()
+    assert Ash.count!(Helpdesk.Support.Attachment, authorize?: false) == 0
+
+    Req.Test.stub(Helpdesk.AttachmentStore, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "abc")
+    end)
+
     view |> form("#agent-attachments-form") |> render_submit()
     attachment = Helpdesk.Repo.get_by!(Helpdesk.Support.Attachment, file_name: "evidence.pdf")
     assert attachment.ticket_id == ticket.id
+
+    assert attachment.checksum ==
+             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+
     assert has_element?(view, "#attachments-#{attachment.id}")
+    refute has_element?(view, "#attachment-thumbnail-#{attachment.id}")
     assert Ash.count!(Ticket, authorize?: false) == 2
 
     file_input(view, "#agent-attachments-form", :attachments, [

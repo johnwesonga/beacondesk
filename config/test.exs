@@ -1,4 +1,5 @@
 import Config
+config :helpdesk, :attachment_request_options, plug: {Req.Test, Helpdesk.AttachmentStore}
 config :helpdesk, notification_processing_mode: :ash_oban
 config :helpdesk, notification_email_worker_enabled: false
 config :helpdesk, Oban, testing: :manual

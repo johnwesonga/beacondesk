@@ -341,12 +341,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
               No attachments.
             </p>
             <div :for={{id, attachment} <- @streams.attachments} id={id}>
-              <.link
-                href={~p"/attachments/#{attachment.id}/download"}
-                class="inline-flex items-center gap-2 break-all text-sm text-sky-700"
-              >
-                <.icon name="hero-paper-clip" class="size-4 shrink-0" />{attachment.file_name}
-              </.link>
+              <HelpdeskWeb.AttachmentComponents.file_link attachment={attachment} />
               <p class="text-xs text-slate-500">
                 {attachment.content_type} · {attachment.byte_size} bytes {if attachment.message_id,
                   do: "· Message attachment",

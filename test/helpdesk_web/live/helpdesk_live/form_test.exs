@@ -91,6 +91,12 @@ defmodule HelpdeskWeb.HelpdeskLive.FormTest do
     render_upload(upload, "first.png", 100)
     render_upload(upload, "second.png", 100)
 
+    Req.Test.stub(Helpdesk.AttachmentStore, fn conn ->
+      Plug.Conn.send_resp(conn, 200, "abc")
+    end)
+
+    Req.Test.allow(Helpdesk.AttachmentStore, self(), view.pid)
+
     view |> form("#ticket-form", ticket: %{title: "x", description: "short"}) |> render_submit()
     assert Ash.count!(Ticket, authorize?: false) == 0
     assert Ash.count!(Helpdesk.Support.Attachment, authorize?: false) == 0
@@ -109,6 +115,13 @@ defmodule HelpdeskWeb.HelpdeskLive.FormTest do
     assert [ticket] = Ash.read!(Ticket, authorize?: false)
     attachments = Ash.read!(Helpdesk.Support.Attachment, authorize?: false)
     assert length(attachments) == 2
+
+    assert Enum.all?(
+             attachments,
+             &(&1.checksum ==
+                 "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+           )
+
     assert Enum.sort(Enum.map(attachments, & &1.file_name)) == ["first.png", "second.png"]
 
     assert Enum.all?(attachments, fn attachment ->
