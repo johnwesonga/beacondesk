@@ -36,6 +36,43 @@ defmodule Helpdesk.AttachmentStore do
     url
   end
 
+  @doc "Calculates a lowercase SHA-256 checksum from the stored object's bytes."
+  def checksum(storage_key) do
+    options = Application.get_env(:helpdesk, :attachment_request_options, [])
+    url = presigned_download_url(%{storage_key: storage_key})
+
+    case Req.get(
+           url,
+           Keyword.merge(options,
+             decode_body: false,
+             retry: false,
+             redirect: false,
+             into: fn {:data, data}, {request, response} ->
+               hash = Map.get(response.private, :checksum_hash, :crypto.hash_init(:sha256))
+
+               response =
+                 Req.Response.put_private(
+                   response,
+                   :checksum_hash,
+                   :crypto.hash_update(hash, data)
+                 )
+
+               {:cont, {request, response}}
+             end
+           )
+         ) do
+      {:ok, %{status: 200} = response} ->
+        hash = Map.get(response.private, :checksum_hash, :crypto.hash_init(:sha256))
+        {:ok, hash |> :crypto.hash_final() |> Base.encode16(case: :lower)}
+
+      {:ok, %{status: status}} ->
+        {:error, {:unexpected_status, status}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   def presigned_upload_form_url(entry, max_file_size) do
     bucket = bucket()
     s3_filepath = s3_filepath(entry)

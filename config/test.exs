@@ -1,5 +1,8 @@
 import Config
-config :helpdesk, notification_worker_enabled: false
+config :helpdesk, :attachment_request_options, plug: {Req.Test, Helpdesk.AttachmentStore}
+config :helpdesk, notification_processing_mode: :ash_oban
+config :helpdesk, notification_email_worker_enabled: false
+config :helpdesk, Oban, testing: :manual
 config :helpdesk, token_signing_secret: "zdCwA+HfJe3VeEnscypAgnr6YsP96R8v"
 config :bcrypt_elixir, log_rounds: 1
 config :ash, policies: [show_policy_breakdowns?: true], disable_async?: true

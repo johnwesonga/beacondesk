@@ -16,6 +16,7 @@ defmodule Helpdesk.Support.Attachment do
     create :attach_to_ticket do
       accept [:ticket_id, :file_name, :file_path, :storage_key, :content_type, :byte_size]
       require_attributes [:ticket_id]
+      change Helpdesk.Support.Changes.CalculateAttachmentChecksum
       change {Helpdesk.Audit.Changes.AppendAttachmentEvent, action: :attach_to_ticket}
     end
   end
@@ -67,7 +68,10 @@ defmodule Helpdesk.Support.Attachment do
     attribute :content_type, :string, allow_nil?: false
     attribute :byte_size, :integer, allow_nil?: false
     attribute :storage_key, :string, allow_nil?: false
-    attribute :checksum, :string
+
+    attribute :checksum, :string do
+      description "Lowercase hexadecimal SHA-256 of the stored file bytes."
+    end
 
     create_timestamp :created_at
   end

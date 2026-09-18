@@ -130,10 +130,18 @@ defmodule HelpdeskWeb.HelpdeskLive.CustomerTest do
            )
 
     refute has_element?(view, "#attachments-#{private.id}")
+
+    assert has_element?(
+             view,
+             "#attachment-thumbnail-#{public.id}[src='/attachments/#{public.id}/download'][loading='lazy']"
+           )
+
+    refute has_element?(view, "#attachment-thumbnail-#{private.id}")
     refute has_element?(view, "#messages-#{note.id}")
     assert get(login(conn, customer), ~p"/attachments/#{private.id}/download").status == 404
     {:ok, view, _} = live(login(conn, admin), ~p"/tickets/#{ticket.id}")
     assert has_element?(view, "#attachments-#{private.id}")
+    assert has_element?(view, "#attachment-thumbnail-#{private.id}")
     assert has_element?(view, "#messages-#{note.id}")
   end
 
