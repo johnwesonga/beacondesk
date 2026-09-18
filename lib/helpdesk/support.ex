@@ -9,5 +9,6 @@ defmodule Helpdesk.Support do
     resource Helpdesk.Support.Attachment
     resource Helpdesk.Support.TeamMembership
     resource Helpdesk.Support.TicketEvent
+    resource Helpdesk.Support.KnowledgeBaseArticle
   end
 end

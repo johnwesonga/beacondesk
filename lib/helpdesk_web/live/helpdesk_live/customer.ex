@@ -43,9 +43,6 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
          |> assign(:page_title, "Customer overview")
          |> assign(:current_page, :overview)
          |> stream(:recent, tickets, reset: true)}
-
-      :help ->
-        {:noreply, socket |> assign(:page_title, "Help center") |> assign(:current_page, :help)}
     end
   end
 
@@ -224,19 +221,19 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
               <.link navigate={~p"/help"} class="text-sm font-semibold text-sky-600">View all</.link>
             </div>
             <.topic
-              href={~p"/help#account"}
+              href={~p"/help?#{%{category: "Accounts & security"}}"}
               icon="hero-key"
               title="Account access and security"
               description="Getting help with sign-in and permissions"
             />
             <.topic
-              href={~p"/help#billing"}
+              href={~p"/help?#{%{category: "Billing & plans"}}"}
               icon="hero-credit-card"
               title="Billing and subscriptions"
               description="What to include in a billing request"
             />
             <.topic
-              href={~p"/help#integrations"}
+              href={~p"/help?#{%{category: "Apps & integrations"}}"}
               icon="hero-puzzle-piece"
               title="Apps and integrations"
               description="Reporting connection and integration issues"
@@ -253,30 +250,6 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
             </.link>
           </section>
         </div>
-      </section>
-      <section :if={@live_action == :help} id="customer-help" class="mx-auto max-w-4xl">
-        <header class="mb-8 text-center">
-          <p class="text-sm font-semibold text-sky-600">Help center</p>
-          <h1 class="mt-3 text-4xl font-black">A little guidance to get started</h1>
-          <p class="mt-3 text-slate-500">Find out what to include so our team can help you.</p>
-        </header>
-        <div class="space-y-5">
-          <.guide id="account" title="Account access and security">
-            If you cannot sign in, use the password reset link on the sign-in page. For access or permission issues, tell us which page you need and the error you see. Never include passwords or verification codes in your ticket.
-          </.guide>
-          <.guide id="billing" title="Billing and subscriptions">
-            Choose Billing when creating your request. Include the invoice reference, the charge date, and what you expected to see. Do not include your full payment card details.
-          </.guide>
-          <.guide id="integrations" title="Apps and integrations">
-            Tell us which service you are connecting, the steps you took, and the exact error message. Remove API keys and other secrets before sharing logs.
-          </.guide>
-          <.guide id="tracking" title="Track your request">
-            Open My tickets to see the current status and read public replies from support. Open a ticket to send more information. Waiting on customer means the support team needs your response.
-          </.guide>
-        </div>
-        <.link navigate={~p"/ticket/new"} class="btn mt-6 border-0 bg-sky-600 text-white">
-          Submit a ticket
-        </.link>
       </section>
       <section :if={@live_action == :show and @ticket} id="customer-detail" class="mx-auto max-w-4xl">
         <.link
@@ -450,19 +423,6 @@ defmodule HelpdeskWeb.HelpdeskLive.Customer do
       </div>
       <.icon name="hero-chevron-right" class="ml-auto size-4 shrink-0" />
     </.link>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :title, :string, required: true
-  slot :inner_block, required: true
-
-  defp guide(assigns) do
-    ~H"""
-    <section id={@id} class="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-6">
-      <h2 class="mb-3 text-lg font-bold">{@title}</h2>
-      <p class="leading-7 text-slate-600">{render_slot(@inner_block)}</p>
-    </section>
     """
   end
 

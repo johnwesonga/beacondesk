@@ -90,9 +90,8 @@ defmodule HelpdeskWeb.HelpdeskLive.CustomerTest do
     {:ok, view, _} = live(conn, ~p"/portal")
     assert has_element?(view, "#recent-empty:only-child")
     {:ok, view, _} = live(conn, ~p"/help")
-    assert has_element?(view, "#account")
-    assert has_element?(view, "#billing")
-    assert has_element?(view, "#integrations")
+    assert has_element?(view, "#knowledge-base")
+    assert has_element?(view, "#kb-search-form")
   end
 
   test "ticket details show permitted attachments and staff messages", %{conn: conn} do
