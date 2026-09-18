@@ -54,6 +54,10 @@ defmodule Helpdesk.Accounts.User do
   end
 
   actions do
+    read :list_customers do
+      filter expr(status == :active and role == :customer)
+    end
+
     read :list_assignees do
       filter expr(status == :active and role in [:admin, :agent])
     end
@@ -271,6 +275,11 @@ defmodule Helpdesk.Accounts.User do
   end
 
   policies do
+    policy action(:list_customers) do
+      authorize_if {Helpdesk.Accounts.Checks.HasPermission,
+                    permission: :open_tickets_for_customers}
+    end
+
     policy action(:list_assignees) do
       authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :assign_tickets}
     end

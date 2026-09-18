@@ -35,6 +35,33 @@ defmodule Helpdesk.Support.Ticket do
       change set_attribute(:source, :web)
     end
 
+    create :open_for_customer do
+      accept [
+        :title,
+        :description,
+        :priority,
+        :category,
+        :team_id,
+        :assignee_id
+      ]
+
+      argument :customer_id, :uuid do
+        allow_nil? false
+      end
+
+      change set_attribute(:customer_id, arg(:customer_id))
+      # Customer visibility and notifications use the reporter relationship.
+      change set_attribute(:reporter_id, arg(:customer_id))
+      change relate_actor(:created_by)
+      change set_attribute(:status, :new)
+      change set_attribute(:source, :web)
+      change Helpdesk.Support.Changes.CreateTicketNumber
+      validate Helpdesk.Support.Validations.ActiveCustomer, only_when_valid?: true
+      validate Helpdesk.Support.Validations.TicketCanBeAssigned, only_when_valid?: true
+      change Helpdesk.Support.Changes.RecordTicketEvent
+      change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.created"}
+    end
+
     update :update_ticket do
       require_atomic? false
 
@@ -89,7 +116,7 @@ defmodule Helpdesk.Support.Ticket do
   end
 
   policies do
-    policy action([:create_ticket, :update_ticket, :assign]) do
+    policy action([:create_ticket, :open_for_customer, :update_ticket, :assign]) do
       authorize_if Helpdesk.Support.Checks.CanSetAssignment
     end
 
@@ -104,6 +131,11 @@ defmodule Helpdesk.Support.Ticket do
 
     policy action(:create_ticket) do
       authorize_if {Helpdesk.Accounts.Checks.HasPermission, permission: :create_tickets}
+    end
+
+    policy action(:open_for_customer) do
+      authorize_if {Helpdesk.Accounts.Checks.HasPermission,
+                    permission: :open_tickets_for_customers}
     end
 
     policy action_type(:read) do
@@ -183,6 +215,13 @@ defmodule Helpdesk.Support.Ticket do
     belongs_to :reporter, Helpdesk.Accounts.User do
       public? true
     end
+
+    belongs_to :customer, Helpdesk.Accounts.User do
+      public? true
+      allow_nil? true
+    end
+
+    belongs_to :created_by, Helpdesk.Accounts.User
 
     has_many :messages, Helpdesk.Support.Message do
       destination_attribute :ticket_id

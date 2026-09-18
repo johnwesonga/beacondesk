@@ -38,6 +38,14 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
      |> assign(:category_options, enum_options([:billing, :bug, :feature, :howto]))
      |> assign(:ticket, ticket)
      |> assign(:can_assign?, can_assign?)
+     |> assign(
+       :can_pick_customer?,
+       is_nil(ticket) and Authorization.allowed?(current_user, :open_tickets_for_customers)
+     )
+     |> assign(:selected_customer, nil)
+     |> assign(:customer_search_form, to_form(%{"query" => ""}, as: :customer_search))
+     |> assign(:customer_search_started?, false)
+     |> stream(:customers, [])
      |> assign(:team_options, team_options)
      |> assign(:selected_team_id, selected_team_id)
      |> assign(
@@ -66,8 +74,47 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
         {socket, params}
       end
 
-    form = AshPhoenix.Form.validate(socket.assigns.form, params)
+    form = AshPhoenix.Form.validate(socket.assigns.form, customer_params(socket, params))
     {:noreply, assign(socket, :form, form)}
+  end
+
+  def handle_event("search-customers", %{"customer_search" => %{"query" => query}}, socket) do
+    if socket.assigns.can_pick_customer? and is_nil(socket.assigns.selected_customer) do
+      query = query |> String.trim() |> String.slice(0, 100)
+      started? = String.length(query) >= 2
+      customers = if started?, do: search_customers(query, socket.assigns.current_user), else: []
+
+      {:noreply,
+       socket
+       |> assign(:customer_search_form, to_form(%{"query" => query}, as: :customer_search))
+       |> assign(:customer_search_started?, started?)
+       |> stream(:customers, customers, reset: true)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_event("select-customer", %{"id" => id}, socket) do
+    with true <- socket.assigns.can_pick_customer?,
+         {:ok, id} <- Ash.Type.cast_input(:uuid, id),
+         {:ok, %User{} = customer} <-
+           User
+           |> Ash.Query.filter(id == ^id)
+           |> Ash.read_one(action: :list_customers, actor: socket.assigns.current_user) do
+      {:noreply, select_customer(socket, customer)}
+    else
+      _ ->
+        {:noreply,
+         put_flash(socket, :error, "Select an active customer from the search results.")}
+    end
+  end
+
+  def handle_event("clear-customer", _params, socket) do
+    if socket.assigns.can_pick_customer? do
+      {:noreply, select_customer(socket, nil)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("cancel-upload", %{"ref" => ref}, socket) do
@@ -81,7 +128,17 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
       {:noreply,
        put_flash(socket, :error, "Please finish or remove failed uploads before saving.")}
     else
-      save_ticket(socket, params, completed)
+      if socket.assigns.can_pick_customer? and is_nil(socket.assigns.selected_customer) and
+           socket.assigns.customer_search_form[:query].value != "" do
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Select a customer or clear the customer search before saving."
+         )}
+      else
+        save_ticket(socket, customer_params(socket, params), completed)
+      end
     end
   end
 
@@ -169,6 +226,79 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
           phx-submit="save"
           class="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm"
         >
+          <section
+            :if={@can_pick_customer?}
+            id="ticket-customer-picker"
+            class="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4"
+          >
+            <h2 class="text-sm font-bold">Customer</h2>
+            <%= if @selected_customer do %>
+              <div id="selected-customer" class="mt-3 flex items-center justify-between gap-3">
+                <p class="text-sm">
+                  <span class="font-semibold">
+                    {@selected_customer.first_name} {@selected_customer.last_name}
+                  </span>
+                  <span class="block text-slate-500">{@selected_customer.email}</span>
+                </p>
+                <button
+                  id="clear-customer"
+                  type="button"
+                  phx-click="clear-customer"
+                  class="btn btn-sm btn-ghost"
+                >
+                  Change customer
+                </button>
+              </div>
+              <input type="hidden" name={@form[:customer_id].name} value={@selected_customer.id} />
+              <p :for={error <- @form[:customer_id].errors} class="mt-2 text-sm text-error">
+                {translate_error(error)}
+              </p>
+            <% else %>
+              <.input
+                field={@customer_search_form[:query]}
+                id="customer-search"
+                type="search"
+                placeholder="Type at least 2 characters"
+                autocomplete="off"
+                maxlength="100"
+                phx-change="search-customers"
+                phx-debounce="300"
+                aria-controls="customer-results"
+              />
+              <p class="text-xs text-slate-500">Leave blank to create a ticket for yourself.</p>
+              <div id="customer-results" phx-update="stream" class="mt-2 space-y-1">
+                <p
+                  id="customer-results-empty"
+                  class="hidden only:block text-sm text-slate-500"
+                  role="status"
+                >
+                  {if @customer_search_started?,
+                    do: "No active customers found.",
+                    else: "Search to find an active customer."}
+                </p>
+                <button
+                  :for={{id, customer} <- @streams.customers}
+                  id={id}
+                  type="button"
+                  phx-click="select-customer"
+                  phx-value-id={customer.id}
+                  class="block w-full rounded-lg border border-slate-200 bg-white p-3 text-left text-sm hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-sky-600"
+                >
+                  <span class="font-semibold">{customer.first_name} {customer.last_name}</span>
+                  <span class="block text-slate-500">{customer.email}</span>
+                </button>
+              </div>
+              <button
+                :if={@customer_search_form[:query].value != ""}
+                id="clear-customer-search"
+                type="button"
+                phx-click="clear-customer"
+                class="btn btn-sm btn-ghost mt-2"
+              >
+                Clear search
+              </button>
+            <% end %>
+          </section>
           <div class="space-y-5">
             <.input
               field={@form[:title]}
@@ -254,17 +384,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
   defp load_ticket(_params, _actor), do: nil
 
   defp assign_form(%{assigns: %{ticket: nil}} = socket) do
-    form =
-      Ticket
-      |> AshPhoenix.Form.for_create(:create_ticket,
-        actor: socket.assigns.current_user,
-        as: "ticket",
-        params: %{"priority" => "medium", "source" => "web", "status" => "new"},
-        prepare_params: &prepare_params/2,
-        exclude_fields_if_empty: [:category]
-      )
-
-    assign(socket, :form, to_form(form))
+    create_form(socket, %{"priority" => "medium"})
   end
 
   defp assign_form(socket) do
@@ -277,10 +397,54 @@ defmodule HelpdeskWeb.HelpdeskLive.Form do
     assign(socket, :form, to_form(form))
   end
 
-  defp prepare_params(params, _phase) do
-    params
-    |> Map.put("source", "web")
-    |> Map.put("status", "new")
+  defp create_form(socket, params) do
+    action = if socket.assigns.selected_customer, do: :open_for_customer, else: :create_ticket
+
+    form =
+      Ticket
+      |> AshPhoenix.Form.for_create(action,
+        actor: socket.assigns.current_user,
+        as: "ticket",
+        params: customer_params(socket, params),
+        exclude_fields_if_empty: [:category]
+      )
+
+    assign(socket, :form, to_form(form))
+  end
+
+  defp select_customer(socket, customer) do
+    params = AshPhoenix.Form.params(socket.assigns.form)
+
+    socket
+    |> assign(:selected_customer, customer)
+    |> assign(:customer_search_form, to_form(%{"query" => ""}, as: :customer_search))
+    |> assign(:customer_search_started?, false)
+    |> stream(:customers, [], reset: true)
+    |> create_form(params)
+  end
+
+  defp customer_params(socket, params) do
+    if socket.assigns.can_pick_customer? and socket.assigns.selected_customer do
+      Map.put(params, "customer_id", socket.assigns.selected_customer.id)
+    else
+      Map.delete(params, "customer_id")
+    end
+  end
+
+  defp search_customers(query, actor) do
+    query = String.downcase(query)
+
+    User
+    |> Ash.Query.filter(
+      contains(string_downcase(first_name), ^query) or
+        contains(string_downcase(last_name), ^query) or
+        contains(email, ^query) or
+        contains(string_downcase(first_name <> " " <> last_name), ^query)
+    )
+    |> Ash.Query.sort(first_name: :asc, last_name: :asc, id: :asc)
+    |> Ash.Query.limit(10)
+    |> Ash.Query.select([:id, :first_name, :last_name, :email])
+    |> Ash.read!(action: :list_customers, actor: actor)
   end
 
   defp enum_options(values) do
