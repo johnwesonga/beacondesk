@@ -49,6 +49,7 @@ defmodule HelpdeskWeb.Router do
       live "/ticket/new", HelpdeskLive.Form, :new
       live "/ticket/:id/edit", HelpdeskLive.Form, :edit
       live "/admin", HelpdeskLive.Admin.Index, :index
+      live "/admin/bulk-assignment", HelpdeskLive.Admin.BulkAssignment, :index
       live "/inbox", HelpdeskLive.Agent, :index
       live "/portal", HelpdeskLive.Customer, :overview
       live "/help", KnowledgeBaseLive.Index, :index

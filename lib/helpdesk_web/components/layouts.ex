@@ -155,6 +155,14 @@ defmodule HelpdeskWeb.Layouts do
             </.workspace_link>
             <.workspace_link
               :if={!@customer? and !@agent?}
+              href={~p"/admin/bulk-assignment"}
+              icon="hero-arrow-path"
+              active={@current_page == :bulk_assignment}
+            >
+              Bulk assign tickets
+            </.workspace_link>
+            <.workspace_link
+              :if={!@customer? and !@agent?}
               href={~p"/teams"}
               icon="hero-user-group"
               active={@current_page == :teams}
