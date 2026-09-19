@@ -88,7 +88,7 @@ defmodule Helpdesk.Support.Message do
       public? true
     end
 
-    attribute :source, Helpdesk.Support.TicketSource do
+    attribute :source, Helpdesk.Support.Types.TicketSource do
       allow_nil? false
       public? true
     end

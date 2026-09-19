@@ -1,4 +1,4 @@
-defmodule Helpdesk.Support.TicketPriority do
+defmodule Helpdesk.Support.Types.TicketPriority do
   use Ash.Type.Enum,
     values: [
       :low,

@@ -157,12 +157,12 @@ defmodule Helpdesk.Support.Ticket do
       allow_nil? false
     end
 
-    attribute :priority, Helpdesk.Support.TicketPriority do
+    attribute :priority, Helpdesk.Support.Types.TicketPriority do
       public? true
       allow_nil? false
     end
 
-    attribute :source, Helpdesk.Support.TicketSource do
+    attribute :source, Helpdesk.Support.Types.TicketSource do
       public? true
       allow_nil? false
     end

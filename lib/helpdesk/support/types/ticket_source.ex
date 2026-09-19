@@ -1,4 +1,4 @@
-defmodule Helpdesk.Support.TicketSource do
+defmodule Helpdesk.Support.Types.TicketSource do
   use Ash.Type.Enum,
     values: [
       :web,
