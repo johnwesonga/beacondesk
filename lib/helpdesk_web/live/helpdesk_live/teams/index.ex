@@ -146,17 +146,30 @@ defmodule HelpdeskWeb.HelpdeskLive.Teams.Index do
           {:noreply, socket |> load_members() |> put_flash(:info, "Member removed.")}
 
         {:error, error} ->
-          message =
-            if is_binary(error),
-              do: error,
-              else: Exception.message(Ash.Error.to_error_class(error))
-
-          {:noreply, put_flash(socket, :error, message)}
+          {:noreply, put_flash(socket, :error, membership_error(error))}
       end
     else
       {:noreply, redirect(socket, to: ~p"/tickets")}
     end
   end
+
+  defp membership_error(error) when is_binary(error), do: error
+
+  defp membership_error(%Ash.Error.Invalid{errors: errors}) do
+    errors
+    |> Enum.map(&membership_error/1)
+    |> Enum.uniq()
+    |> Enum.join(" ")
+  end
+
+  defp membership_error(%Ash.Error.Changes.InvalidAttribute{message: message} = error)
+       when is_binary(message) do
+    {_field, message, vars} = AshPhoenix.FormData.Error.to_form_error(error)
+    message = translate_error({message, vars})
+    String.capitalize(String.trim_trailing(message, ".")) <> "."
+  end
+
+  defp membership_error(_), do: "Could not update team membership. Please try again."
 
   defp load_members(socket) do
     actor = socket.assigns.current_user
