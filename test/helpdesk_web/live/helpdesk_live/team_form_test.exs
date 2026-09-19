@@ -104,6 +104,8 @@ defmodule HelpdeskWeb.HelpdeskLive.TeamFormTest do
     assert has_element?(view, "#members-#{membership.id}")
     render_submit(view, "add-member", %{"member" => %{"user_id" => agent.id}})
     assert Ash.count!(Helpdesk.Support.TeamMembership, authorize?: false) == 1
+    assert has_element?(view, "#flash-error", "Already belongs to this team.")
+    refute has_element?(view, "#flash-error", "Bread Crumbs")
 
     ticket =
       Ash.Seed.seed!(Helpdesk.Support.Ticket, %{
@@ -121,6 +123,15 @@ defmodule HelpdeskWeb.HelpdeskLive.TeamFormTest do
     view |> element("#remove-member-#{membership.id}") |> render_click()
     assert has_element?(view, "#members-#{membership.id}")
     assert Helpdesk.Repo.get(Helpdesk.Support.TeamMembership, membership.id)
+
+    assert has_element?(
+             view,
+             "#flash-error",
+             "Reassign this member's active tickets in this team before removing them."
+           )
+
+    refute has_element?(view, "#flash-error", "Value: nil")
+    refute has_element?(view, "#flash-error", "Bread Crumbs")
 
     Helpdesk.Repo.update_all(Ecto.Query.where(Helpdesk.Support.Ticket, id: ^ticket.id),
       set: [status: :resolved]

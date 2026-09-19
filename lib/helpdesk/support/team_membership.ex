@@ -16,12 +16,12 @@ defmodule Helpdesk.Support.TeamMembership do
     create :add_member do
       accept [:user_id, :team_id]
       require_attributes [:user_id, :team_id]
-      validate Helpdesk.Support.Validations.TeamMember
+      validate Helpdesk.Support.Validations.AddTeamMember
     end
 
     destroy :remove_member do
       require_atomic? false
-      validate {Helpdesk.Support.Validations.TeamMember, removing?: true}
+      validate Helpdesk.Support.Validations.RemoveTeamMember
     end
   end
 
