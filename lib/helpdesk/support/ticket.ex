@@ -113,6 +113,20 @@ defmodule Helpdesk.Support.Ticket do
       change Helpdesk.Support.Changes.RecordTicketEvent
       change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.updated"}
     end
+
+    update :close do
+      require_atomic? false
+      accept [:status]
+
+      validate attribute_does_not_equal(:status, :closed) do
+        message "Ticket is already closed"
+      end
+
+      change set_attribute(:status, :closed)
+      change Helpdesk.Support.Changes.SetStatusTimestamps
+      change Helpdesk.Support.Changes.RecordTicketEvent
+      change {Helpdesk.Audit.Changes.AppendTicketEvent, action: "ticket.closed"}
+    end
   end
 
   policies do
