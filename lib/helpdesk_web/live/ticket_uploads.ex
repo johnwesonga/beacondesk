@@ -2,8 +2,8 @@ defmodule HelpdeskWeb.TicketUploads do
   @moduledoc "Shared external upload configuration and ticket attachment persistence."
   alias Helpdesk.AttachmentStore
 
-  def allow(socket, callback \\ &__MODULE__.presign/2) do
-    Phoenix.LiveView.allow_upload(socket, :attachments,
+  def allow(socket, callback \\ &__MODULE__.presign/2, name \\ :attachments) do
+    Phoenix.LiveView.allow_upload(socket, name,
       accept: ~w(.png .jpeg .jpg .webp .pdf .doc),
       max_entries: 3,
       external: callback,
@@ -11,19 +11,26 @@ defmodule HelpdeskWeb.TicketUploads do
     )
   end
 
-  def presign(entry, socket) do
+  def presign(entry, socket, name \\ :attachments) do
     {:ok,
      AttachmentStore.presigned_upload_form_url(
        entry,
-       socket.assigns.uploads.attachments.max_file_size
+       socket.assigns.uploads[name].max_file_size
      ), socket}
   end
 
   # Caller wraps ticket changes and all attachment writes in one Repo transaction.
   def persist!(ticket, entries, actor) do
+    persist!(%{ticket_id: ticket.id}, :attach_to_ticket, entries, actor)
+  end
+
+  def persist_message!(message, entries, actor) do
+    persist!(%{message_id: message.id}, :attach_to_message, entries, actor)
+  end
+
+  defp persist!(parent, action, entries, actor) do
     Enum.each(entries, fn entry ->
       attributes = %{
-        ticket_id: ticket.id,
         file_name: entry.client_name,
         file_path: AttachmentStore.entry_url(entry),
         storage_key: AttachmentStore.s3_filepath(entry),
@@ -31,8 +38,8 @@ defmodule HelpdeskWeb.TicketUploads do
         byte_size: entry.client_size
       }
 
-      case Ash.create(Helpdesk.Support.Attachment, attributes,
-             action: :attach_to_ticket,
+      case Ash.create(Helpdesk.Support.Attachment, Map.merge(attributes, parent),
+             action: action,
              actor: actor
            ) do
         {:ok, _} -> :ok
@@ -41,8 +48,8 @@ defmodule HelpdeskWeb.TicketUploads do
     end)
   end
 
-  def consume(socket) do
-    Phoenix.LiveView.consume_uploaded_entries(socket, :attachments, fn _, entry ->
+  def consume(socket, name \\ :attachments) do
+    Phoenix.LiveView.consume_uploaded_entries(socket, name, fn _, entry ->
       {:ok, entry.ref}
     end)
   end

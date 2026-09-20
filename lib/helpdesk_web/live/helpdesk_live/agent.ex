@@ -1,5 +1,6 @@
 defmodule HelpdeskWeb.HelpdeskLive.Agent do
   use HelpdeskWeb, :live_view
+  alias HelpdeskWeb.MessageUploads
   alias Helpdesk.Accounts.{Authorization, User}
   alias Helpdesk.Support.{Ticket, Message, Team, TeamMembership}
   alias HelpdeskWeb.TicketUploads
@@ -20,6 +21,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
        |> assign(:ticket, nil)
        |> assign(:upload_form, to_form(%{}, as: :upload))
        |> TicketUploads.allow(&presign_upload/2)
+       |> MessageUploads.allow()
        |> assign(:mode, "public")
        |> assign(:message_form, nil)
        |> assign(
@@ -111,6 +113,9 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
   end
 
   @impl true
+  def handle_event("cancel-message-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :message_attachments, ref)}
+
   def handle_event("validate-uploads", _, socket), do: {:noreply, socket}
 
   def handle_event("cancel-upload", %{"ref" => ref}, socket),
@@ -144,7 +149,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
   end
 
   def handle_event("mode", %{"mode" => mode}, socket) when mode in ["public", "internal"] do
-    {:noreply, socket |> assign(:mode, mode) |> message_form()}
+    {:noreply, socket |> MessageUploads.cancel() |> assign(:mode, mode) |> message_form()}
   end
 
   def handle_event("validate-message", %{"message" => params}, socket) do
@@ -156,13 +161,19 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
     with {:ok, socket} <- fresh_ticket(socket) do
       socket = message_form(socket)
 
-      case AshPhoenix.Form.submit(socket.assigns.message_form, params: Map.take(params, ["body"])) do
+      case MessageUploads.submit(socket, socket.assigns.message_form, Map.take(params, ["body"])) do
         {:ok, _} ->
           {:noreply,
            socket |> select_ticket(socket.assigns.ticket.id) |> put_flash(:info, "Message sent.")}
 
-        {:error, form} ->
+        {:error, {:form, form}} ->
           {:noreply, assign(socket, :message_form, form)}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> assign(:message_form, AshPhoenix.Form.validate(socket.assigns.message_form, params))
+           |> put_flash(:error, MessageUploads.error_message(reason))}
       end
     else
       _ -> {:noreply, denied(socket)}
@@ -260,6 +271,8 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
   defp form_name(:assignment_form), do: "assignment"
 
   defp cancel_ticket_uploads(socket) do
+    socket = MessageUploads.cancel(socket)
+
     Enum.reduce(socket.assigns.uploads.attachments.entries, socket, fn entry, acc ->
       cancel_upload(acc, :attachments, entry.ref)
     end)
@@ -284,6 +297,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
           Message
           |> Ash.Query.filter(ticket_id == ^ticket.id)
           |> Ash.Query.sort(inserted_at: :asc, id: :asc)
+          |> Ash.Query.load(:attachments)
           |> Ash.read!(actor: actor)
 
         attachments =
@@ -583,6 +597,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
                     <time>{date(message.inserted_at)}</time>
                   </div>
                   <p class="whitespace-pre-wrap break-words text-sm leading-6">{message.body}</p>
+                  <HelpdeskWeb.AttachmentComponents.message_files message={message} />
                 </article>
               </div>
             </div>
@@ -625,6 +640,11 @@ defmodule HelpdeskWeb.HelpdeskLive.Agent do
                   rows="4"
                   required
                   maxlength="10000"
+                />
+                <HelpdeskWeb.AttachmentUpload.picker
+                  upload={@uploads.message_attachments}
+                  label="Add message attachments"
+                  cancel_event="cancel-message-upload"
                 />
                 <button
                   id="send-agent-message"

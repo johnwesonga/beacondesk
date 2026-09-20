@@ -1,5 +1,6 @@
 defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
   use HelpdeskWeb, :live_view
+  alias HelpdeskWeb.MessageUploads
   alias Helpdesk.Support.{Ticket, Message}
   alias Helpdesk.Accounts.Authorization
   require Ash.Query
@@ -16,6 +17,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
        |> assign(:current_scope, %{user: actor})
        |> assign(:ticket, nil)
        |> assign(:reply_form, nil)
+       |> MessageUploads.allow()
        |> assign(:search_form, to_form(%{"q" => ""}, as: :search))
        |> stream(:recent, [])
        |> stream(:messages, [])
@@ -33,6 +35,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
           {:ok, ticket} ->
             {:noreply,
              socket
+             |> MessageUploads.cancel()
              |> assign(:page_title, ticket.title)
              |> assign(:current_page, :tickets)
              |> assign(:ticket, ticket)
@@ -46,6 +49,9 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
   end
 
   @impl true
+  def handle_event("cancel-message-upload", %{"ref" => ref}, socket),
+    do: {:noreply, cancel_upload(socket, :message_attachments, ref)}
+
   def handle_event("search", %{"search" => %{"q" => query}}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/tickets?#{%{q: query}}")}
   end
@@ -62,7 +68,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
          {:ok, ticket} <- accessible_ticket(socket.assigns.ticket.id, actor) do
       socket = assign(socket, :current_user, actor) |> reply_form(ticket)
 
-      case AshPhoenix.Form.submit(socket.assigns.reply_form, params: params) do
+      case MessageUploads.submit(socket, socket.assigns.reply_form, params) do
         {:ok, _message} ->
           {:noreply,
            socket
@@ -70,8 +76,14 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
            |> load_messages(ticket)
            |> put_flash(:info, "Your reply has been sent.")}
 
-        {:error, form} ->
+        {:error, {:form, form}} ->
           {:noreply, assign(socket, :reply_form, form)}
+
+        {:error, reason} ->
+          {:noreply,
+           socket
+           |> assign(:reply_form, AshPhoenix.Form.validate(socket.assigns.reply_form, params))
+           |> put_flash(:error, MessageUploads.error_message(reason))}
       end
     else
       _ -> {:noreply, unavailable(socket)}
@@ -114,6 +126,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
       Message
       |> Ash.Query.filter(ticket_id == ^ticket.id)
       |> Ash.Query.sort(inserted_at: :asc, id: :asc)
+      |> Ash.Query.load(:attachments)
       |> Ash.read!(actor: socket.assigns.current_user)
 
     attachments =
@@ -376,6 +389,7 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
               </time>
             </div>
             <p class="whitespace-pre-wrap break-words leading-7">{message.body}</p>
+            <HelpdeskWeb.AttachmentComponents.message_files message={message} />
           </article>
         </div>
         <.form
@@ -385,6 +399,11 @@ defmodule HelpdeskWeb.HelpdeskLive.Tickets.View do
           phx-submit="send-reply"
           class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
         >
+          <HelpdeskWeb.AttachmentUpload.picker
+            upload={@uploads.message_attachments}
+            label="Add message attachments"
+            cancel_event="cancel-message-upload"
+          />
           <.input
             field={@reply_form[:body]}
             type="textarea"
