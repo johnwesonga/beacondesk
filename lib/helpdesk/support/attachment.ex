@@ -13,6 +13,14 @@ defmodule Helpdesk.Support.Attachment do
   actions do
     defaults [:read]
 
+    create :attach_to_message do
+      accept [:message_id, :file_name, :file_path, :storage_key, :content_type, :byte_size]
+      require_attributes [:message_id]
+      change Helpdesk.Support.Changes.SetAttachmentTicket
+      change Helpdesk.Support.Changes.CalculateAttachmentChecksum
+      change {Helpdesk.Audit.Changes.AppendAttachmentEvent, action: :attach_to_message}
+    end
+
     create :attach_to_ticket do
       accept [:ticket_id, :file_name, :file_path, :storage_key, :content_type, :byte_size]
       require_attributes [:ticket_id]
@@ -22,6 +30,10 @@ defmodule Helpdesk.Support.Attachment do
   end
 
   policies do
+    policy action(:attach_to_message) do
+      authorize_if Helpdesk.Support.Checks.CanAttachToMessage
+    end
+
     policy action(:attach_to_ticket) do
       authorize_if Helpdesk.Support.Checks.CanAccessTicket
     end

@@ -2,11 +2,13 @@ defmodule HelpdeskWeb.AttachmentUpload do
   use HelpdeskWeb, :html
 
   attr :upload, :any, required: true
+  attr :label, :string, default: "Add ticket attachments"
+  attr :cancel_event, :string, default: "cancel-upload"
 
   def picker(assigns) do
     ~H"""
     <label for={@upload.ref} class="mb-2 block font-semibold">
-      Add ticket attachments
+      {@label}
     </label>
     <.live_file_input upload={@upload} class="file-input w-full" />
     <p class="mt-2 text-xs text-slate-500">
@@ -30,7 +32,7 @@ defmodule HelpdeskWeb.AttachmentUpload do
       </p>
       <button
         type="button"
-        phx-click="cancel-upload"
+        phx-click={@cancel_event}
         phx-value-ref={entry.ref}
         class="btn btn-xs btn-ghost"
       >
