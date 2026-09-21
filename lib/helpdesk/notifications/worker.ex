@@ -32,7 +32,7 @@ defmodule Helpdesk.Notifications.Worker do
     Process.send_after(
       self(),
       :poll,
-      Application.get_env(:helpdesk, :notification_poll_interval, 5_000)
+      Application.get_env(:helpdesk, :notification_poll_interval, 60_000)
     )
   end
 
