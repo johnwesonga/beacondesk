@@ -116,9 +116,17 @@ defmodule HelpdeskWeb.HelpdeskLive.Admin.BulkAssignment do
   defp error_message(_),
     do: "Tickets could not be reassigned. No tickets were changed. Please try again."
 
-  defp label(agent),
-    do:
-      "#{agent.first_name} #{agent.last_name} (#{agent.email})#{if agent.status == :disabled, do: " — disabled", else: ""}"
+  defp label(agent) do
+    teams =
+      agent.team_memberships
+      |> Enum.map(& &1.team.name)
+      |> Enum.sort()
+      |> Enum.join(", ")
+
+    teams = if teams == "", do: "No teams", else: teams
+
+    "#{agent.first_name} #{agent.last_name} — #{teams} (#{agent.email})#{if agent.status == :disabled, do: " — disabled", else: ""}"
+  end
 
   @impl true
   def render(assigns) do

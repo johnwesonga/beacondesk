@@ -10,6 +10,7 @@ defmodule Helpdesk.Support.BulkAssignment do
       User
       |> Ash.Query.filter(role in [:agent, :admin])
       |> Ash.Query.sort(email: :asc)
+      |> Ash.Query.load(team_memberships: :team)
       |> Ash.read(actor: actor)
     end
   end
